@@ -11,7 +11,7 @@ up in real architecture decisions.
 - Two scenario types accompany each topic: a **greenfield design** decision and
   a **lift-and-shift / migration** decision, since the exam frames questions
   both ways.
-- Add new topics under [Topics](#topics) and link them in the table of contents.
+- Add new topics under [[#Topics|Topics]] and link them in the table of contents.
 
 ### Topic template
 
@@ -30,29 +30,29 @@ up in real architecture decisions.
 
 ## Table of contents
 
-- [Networking & Content Delivery](#networking--content-delivery)
-  - [Anycast IPs & AWS Global Accelerator](#anycast-ips--aws-global-accelerator)
-  - [BGP — Border Gateway Protocol](#bgp--border-gateway-protocol)
-  - [AWS Cloud Map](#aws-cloud-map)
-  - [AWS Transit Gateway](#aws-transit-gateway)
-  - [AWS App Mesh](#aws-app-mesh)
-- [Analytics](#analytics)
-  - [Amazon Data Firehose](#amazon-data-firehose)
-  - [AWS Lake Formation](#aws-lake-formation)
-- [Management & Governance](#management--governance)
-  - [AWS Control Tower](#aws-control-tower)
-- [Developer Tools](#developer-tools)
-  - [AWS X-Ray](#aws-x-ray)
-- [Machine Learning & AI](#machine-learning--ai)
-  - [Amazon Textract](#amazon-textract)
-  - [Amazon Comprehend](#amazon-comprehend)
-- [Security, Identity & Compliance](#security-identity--compliance)
-  - [AWS Security Hub](#aws-security-hub)
-  - [AWS CloudHSM](#aws-cloudhsm)
-- [Storage](#storage)
-  - [Amazon EFS — Elastic File System](#amazon-efs--elastic-file-system)
-- [Applied Solutions](#applied-solutions)
-  - [HBS case study — digitizing decades of bankruptcy filings](#hbs-case-study--digitizing-decades-of-bankruptcy-filings)
+- [[#Networking & Content Delivery|Networking & Content Delivery]]
+  - [[#Anycast IPs & AWS Global Accelerator|Anycast IPs & AWS Global Accelerator]]
+  - [[#BGP — Border Gateway Protocol|BGP — Border Gateway Protocol]]
+  - [[#AWS Cloud Map|AWS Cloud Map]]
+  - [[#AWS Transit Gateway|AWS Transit Gateway]]
+  - [[#AWS App Mesh|AWS App Mesh]]
+- [[#Analytics|Analytics]]
+  - [[#Amazon Data Firehose|Amazon Data Firehose]]
+  - [[#AWS Lake Formation|AWS Lake Formation]]
+- [[#Management & Governance|Management & Governance]]
+  - [[#AWS Control Tower|AWS Control Tower]]
+- [[#Developer Tools|Developer Tools]]
+  - [[#AWS X-Ray|AWS X-Ray]]
+- [[#Machine Learning & AI|Machine Learning & AI]]
+  - [[#Amazon Textract|Amazon Textract]]
+  - [[#Amazon Comprehend|Amazon Comprehend]]
+- [[#Security, Identity & Compliance|Security, Identity & Compliance]]
+  - [[#AWS Security Hub|AWS Security Hub]]
+  - [[#AWS CloudHSM|AWS CloudHSM]]
+- [[#Storage|Storage]]
+  - [[#Amazon EFS — Elastic File System|Amazon EFS — Elastic File System]]
+- [[#Applied Solutions|Applied Solutions]]
+  - [[#HBS case study — digitizing decades of bankruptcy filings|HBS case study — digitizing decades of bankruptcy filings]]
 
 ---
 
@@ -164,7 +164,7 @@ routing on hybrid connectivity.
 - **vs static routes** — BGP adapts when a path dies; static routes don't.
 - **Underpins anycast / Global Accelerator** — the "route to the nearest healthy
   location" behavior of anycast is BGP doing path selection (see
-  [Anycast IPs & AWS Global Accelerator](#anycast-ips--aws-global-accelerator)).
+  [[#Anycast IPs & AWS Global Accelerator|Anycast IPs & AWS Global Accelerator]]).
 
 **Scenario — design:** You're building hybrid connectivity with a primary
 **Direct Connect** link and a **Site-to-Site VPN** as backup, and you want
@@ -308,7 +308,7 @@ each service is written.
   routing / proxy** layer (*how* traffic flows, via Envoy); Cloud Map is the
   **service registry** (*where* things are). App Mesh can pull endpoints from
   Cloud Map. Mesh = traffic control + observability; registry = discovery (see
-  [AWS Cloud Map](#aws-cloud-map)).
+  [[#AWS Cloud Map|AWS Cloud Map]]).
 - **vs API Gateway** — API Gateway is the managed **front door** for APIs
   (north-south, external clients). App Mesh governs **east-west**,
   service-to-service traffic *inside* the application.
@@ -377,7 +377,7 @@ streaming sources for business/social-science research:
   or ad real-time-bidding logs for fintech and digital-advertising research.
 - **Text & social** — social-media and news/press-release feeds for information
   diffusion, sentiment, and **event studies** around corporate announcements
-  (lands raw, then analyzed with [Amazon Comprehend](#amazon-comprehend)).
+  (lands raw, then analyzed with [[#Amazon Comprehend|Amazon Comprehend]]).
 - **Behavior & platforms** — clickstream and app-event data from online field
   experiments / A-B tests; e-commerce order or point-of-sale streams for
   operations and marketing research.
@@ -652,7 +652,7 @@ theme — all via API calls.
 
 - **vs Amazon Textract** — these **chain**, they don't compete. Textract
   *extracts* the raw text; Comprehend *analyzes its meaning*. Extraction →
-  Textract; understanding → Comprehend (see [Amazon Textract](#amazon-textract)).
+  Textract; understanding → Comprehend (see [[#Amazon Textract|Amazon Textract]]).
 - **vs Amazon Translate** — Translate converts text from one language to another;
   Comprehend *understands* text. Translate vs understand.
 - **vs Amazon SageMaker** — Comprehend is a **ready-made NLP API**; SageMaker is
@@ -920,7 +920,7 @@ flowchart TD
    reads multi-page documents directly from S3 and returns not just text but
    **tables and form key-value pairs** — important for bankruptcy schedules of
    assets, liabilities, and creditors — including handwriting on older scans. See
-   [Amazon Textract](#amazon-textract).
+   [[#Amazon Textract|Amazon Textract]].
 4. **Orchestrate the pipeline.** An **S3 upload event** triggers a **Lambda**
    function that starts the Textract async job; Textract signals completion via
    **SNS**, and a second Lambda collects the result. For a decades-long backfill,
@@ -931,14 +931,14 @@ flowchart TD
    amounts, dates), **custom classification** (e.g. Chapter 7 / 11 / 13), and
    **PII detection/redaction** to anonymize personal data for IRB compliance
    before analysis. Custom entity recognition can be trained for
-   bankruptcy-specific terms. See [Amazon Comprehend](#amazon-comprehend) and its
-   [research use cases](#amazon-comprehend).
+   bankruptcy-specific terms. See [[#Amazon Comprehend|Amazon Comprehend]] and its
+   [[#Amazon Comprehend|research use cases]].
 6. **Store and query the structured output.** Write the extracted fields to a
    structured store — **DynamoDB** for lookups, or Parquet files in S3 cataloged
    by the **AWS Glue Data Catalog** and queried with **Amazon Athena** (SQL,
    pay-per-query). Govern shared access with **AWS Lake Formation** if a research
    team needs fine-grained, column-level permissions. See
-   [AWS Lake Formation](#aws-lake-formation).
+   [[#AWS Lake Formation|AWS Lake Formation]].
 7. **Explore.** Query with Athena, visualize in **QuickSight**, or export the
    clean dataset from S3 into the researcher's stats tooling (R / Python).
 
