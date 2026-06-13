@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+"""v2: AWS service Anki deck with SAA-C03 exam fields
+(Pick this when / Don't confuse with / Resilience scope)."""
+import html
+import hashlib
+import genanki
+
+from build_deck import SERVICES, URL, assoc_html
+from exam_fields import EXAM
+
+
+def esc(s):
+    return html.escape(s)
+
+
+def stable_guid(name):
+    # Deterministic per-service GUID so re-importing any version updates
+    # the same card instead of creating duplicates.
+    return "awscard-" + hashlib.md5(name.encode()).hexdigest()[:12]
+
+
+model = genanki.Model(
+    1607392320,  # new model id (note type changed: 8 fields)
+    "AWS Service Card v2",
+    fields=[
+        {"name": "Service"},
+        {"name": "Category"},
+        {"name": "Description"},
+        {"name": "Associated"},
+        {"name": "ServiceLink"},
+        {"name": "Pick"},
+        {"name": "Confuse"},
+        {"name": "Scope"},
+    ],
+    templates=[{
+        "name": "Card 1",
+        "qfmt": '<div class="svc"><a href="{{ServiceLink}}">{{Service}} '
+                '<span class="ext">&#8599;</span></a></div>'
+                '<div class="cat">{{Category}}</div>',
+        "afmt": '''{{FrontSide}}<hr id="answer">
+<div class="desc">{{Description}}</div>
+<div class="row pick"><span class="lab">Pick this when</span>{{Pick}}</div>
+<div class="row confuse"><span class="lab">Don&#39;t confuse with</span>{{Confuse}}</div>
+<div class="row scope"><span class="lab">Resilience scope</span>{{Scope}}</div>
+<div class="assoc-label">Often associated with</div>
+<div class="assoc">{{Associated}}</div>''',
+    }],
+    css='''.card { font-family: -apple-system, Helvetica, Arial, sans-serif; font-size: 17px; text-align: center; color: #232f3e; background: #fff; padding: 16px; }
+.svc { font-size: 28px; font-weight: 700; }
+.svc a { color: #ec7211; text-decoration: none; }
+.svc a:hover { text-decoration: underline; }
+.svc .ext { font-size: 16px; vertical-align: 1px; }
+.cat { font-size: 13px; letter-spacing: 1px; text-transform: uppercase; color: #687078; margin-top: 4px; }
+.desc { font-size: 16px; line-height: 1.5; margin: 12px auto; max-width: 560px; text-align: left; }
+.row { text-align: left; max-width: 560px; margin: 10px auto; font-size: 15px; line-height: 1.45; border-left: 3px solid #d5dbdb; padding: 4px 0 4px 12px; }
+.row .lab { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #687078; margin-bottom: 2px; }
+.row.pick { border-left-color: #1d9e75; }
+.row.confuse { border-left-color: #d85a30; }
+.row.scope { border-left-color: #378add; }
+.assoc-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #687078; margin-top: 16px; }
+.assoc { font-size: 15px; line-height: 1.7; margin-top: 4px; }
+.assoc a { color: #0073bb; text-decoration: none; }
+.assoc a:hover { text-decoration: underline; }
+hr#answer { border: none; border-top: 1px solid #d5dbdb; margin: 14px 0; }''',
+)
+
+deck = genanki.Deck(2059400110, "AWS Solutions Architect — Services")
+
+missing_url = [n for n, *_ in SERVICES if n not in URL]
+missing_exam = [n for n, *_ in SERVICES if n not in EXAM]
+if missing_url:
+    raise SystemExit(f"Missing URL: {missing_url}")
+if missing_exam:
+    raise SystemExit(f"Missing exam fields: {missing_exam}")
+
+for name, cat, desc, assoc in SERVICES:
+    pick, confuse, scope = EXAM[name]
+    note = genanki.Note(
+        model=model,
+        guid=stable_guid(name),
+        fields=[
+            name, cat, desc, assoc_html(assoc), URL[name],
+            esc(pick), esc(confuse), esc(scope),
+        ],
+    )
+    deck.add_note(note)
+
+out = "/sessions/adoring-funny-hopper/mnt/outputs/AWS_Services.apkg"
+genanki.Package(deck).write_to_file(out)
+print(f"Wrote {len(SERVICES)} cards to {out}")
