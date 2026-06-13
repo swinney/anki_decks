@@ -33,6 +33,8 @@ up in real architecture decisions.
 - [Networking & Content Delivery](#networking--content-delivery)
   - [Anycast IPs & AWS Global Accelerator](#anycast-ips--aws-global-accelerator)
   - [BGP — Border Gateway Protocol](#bgp--border-gateway-protocol)
+- [Analytics](#analytics)
+  - [Amazon Data Firehose](#amazon-data-firehose)
 
 ---
 
@@ -163,3 +165,54 @@ preserving the redundancy model you already operate.
 - [Cloudflare — What is BGP?](https://www.cloudflare.com/learning/security/glossary/what-is-bgp/)
 - [Direct Connect — routing policies and BGP communities](https://docs.aws.amazon.com/directconnect/latest/UserGuide/routing-and-bgp.html)
 - [Site-to-Site VPN — routing options (static vs BGP)](https://docs.aws.amazon.com/vpn/latest/s2svpn/VPNRoutingTypes.html)
+
+## Analytics
+
+### Amazon Data Firehose
+
+**Concept** — Amazon Data Firehose (formerly Kinesis Data Firehose) is the
+**fully managed, no-code way to load streaming data into a destination** — S3,
+Redshift, OpenSearch, or third parties like Splunk — in **near real time**. You
+point a stream at a source, optionally transform/convert records in flight (e.g.
+via a Lambda function or to Parquet), and Firehose **buffers** by size or time
+and writes batches to the destination. There are no shards to size, no
+consumers to run, and no servers to manage — it auto-scales to throughput.
+
+**Why it matters** — It removes the "last mile" plumbing of a streaming
+pipeline. Instead of writing and operating a consumer application to read a
+stream and persist it, you get **delivery-as-a-service** with built-in
+buffering, retry, optional compression/format conversion, and direct
+integrations to analytics stores. That makes it the default glue for
+"streaming-data → data lake / warehouse" ingestion.
+
+**Exam angle — don't confuse with:**
+
+- **vs Kinesis Data Streams (KDS)** — the key SAA distinction. KDS is a
+  *durable, replayable stream* you build **custom real-time consumers** against
+  (multiple readers, ordering, ~configurable retention). Firehose is **managed
+  delivery to a destination** — no consumers, no replay, no per-record
+  random access. Keyword cues: *"load/deliver into S3/Redshift/OpenSearch with
+  no code"* → Firehose; *"custom real-time processing / multiple consumers /
+  replay"* → Data Streams.
+- **vs Amazon MSK (Managed Streaming for Apache Kafka) / Kinesis generally** — MSK is managed Apache Kafka for teams
+  that need Kafka itself; Firehose is not a streaming platform, it's a loader.
+- **vs Lambda-only pipelines** — you *can* hand-roll ingestion with Lambda, but
+  Firehose owns the buffering/batching/retry so you don't operate it.
+
+**Scenario — design:** You're building clickstream analytics for a new web app.
+Events must land in an S3 data lake (and a Redshift table) for near-real-time
+dashboards, and the team doesn't want to run streaming consumers. → **Amazon
+Data Firehose**: ingest the events, convert to Parquet, buffer, and deliver to
+S3 + Redshift with no consumer code. Reach for **Data Streams** only if you also
+need custom real-time processing or replay of the raw events.
+
+**Scenario — lift & shift:** You migrate an on-prem logging pipeline that ships
+application logs to a search cluster. → Send logs to **Firehose** with delivery
+to **OpenSearch** (with S3 backup of raw records), replacing the
+self-managed forwarders/buffering layer with a managed stream you don't operate.
+
+**Resources:**
+
+- [Amazon Data Firehose — product page](https://aws.amazon.com/firehose/)
+- [Amazon Data Firehose — Developer Guide](https://docs.aws.amazon.com/firehose/latest/dev/what-is-this-service.html)
+- [Kinesis Data Streams vs Data Firehose (FAQ)](https://aws.amazon.com/kinesis/data-firehose/faqs/)
