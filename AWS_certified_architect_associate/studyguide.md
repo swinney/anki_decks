@@ -106,3 +106,39 @@ behind them without ever touching the client config.
 - [Global Accelerator vs CloudFront (FAQ)](https://aws.amazon.com/global-accelerator/faqs/)
 - [CloudFront — product page](https://aws.amazon.com/cloudfront/)
 - [Route 53 routing policies](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/routing-policy.html)
+
+- BGP (Border Gateway Protocol) is the routing protocol that powers the internet. Think of it as the internet's postal service or GPS: it evaluates all available network paths and determines the most efficient route for data to travel from one network to another. [1, 2, 3, 4]  
+How BGP Works 
+The internet is not a single, massive network; it is a collection of thousands of smaller, interconnected networks called Autonomous Systems (AS). These are owned by Internet Service Providers (ISPs), large enterprises, and tech giants. [3, 4, 5]  
+When data crosses the globe, it must jump between these different systems. BGP facilitates this by performing three primary tasks: 
+
+• Path Selection: It analyzes all possible routes and chooses the best path based on network rules, policies, and efficiency rather than just the shortest physical distance. 
+• Route Advertisement: BGP-enabled routers constantly share (or "advertise") their reachability information, announcing which IP address ranges they can connect to. 
+• Policy Control: Network administrators can set BGP policies to prioritize certain routes, avoid congested networks, or balance internet traffic. [8, 9]  
+
+BGP: Internal vs. External 
+BGP operates in two distinct ways depending on where the data is traveling: 
+
+• eBGP (External BGP): Used to exchange routing information between different Autonomous Systems (e.g., connecting your ISP's network to a neighboring ISP's network). 
+• iBGP (Internal BGP): Used to share routing information within a single Autonomous System (e.g., a massive data center distributing traffic across its own internal servers). [8]  
+
+Why BGP is Essential 
+Without BGP, the global internet would not function. It is highly scalable, supports multihoming (allowing an organization to connect to multiple ISPs for redundancy), and automatically updates routing tables if a specific connection fails. [1, 3, 8, 10]  
+Because of its foundational role, a misconfigured BGP update can cause massive, global internet outages. To learn more about how internet infrastructure utilizes this protocol, explore Cloudflare's BGP Guide or the Cisco BGP Documentation. [1, 3, 11, 12]  
+
+AI can make mistakes, so double-check responses
+
+[1] https://www.cloudflare.com/learning/security/glossary/what-is-bgp/
+[2] https://networklessons.com/bgp
+[3] https://community.cisco.com/t5/network-management/what-is-bgp-for-beginners/td-p/5136090
+[4] https://aws.amazon.com/what-is/border-gateway-protocol/
+[5] https://www.youtube.com/watch?v=A1KXPpqlNZ4
+[6] https://www.youtube.com/watch?v=ibK1OpjILk0
+[7] https://www.thousandeyes.com/learning/glossary/bgp-border-gateway-protocol
+[8] https://www.geeksforgeeks.org/computer-networks/border-gateway-protocol-bgp/
+[9] https://www.kentik.com/kentipedia/what-is-bgp-border-gateway-protocol/
+[10] https://www.reddit.com/r/selfhosted/comments/1d72t2d/what_does_bgp_do_exactly/
+[11] https://www.ntia.gov/programs-and-initiatives/border-gateway-protocol
+[12] https://www.cisco.com/c/en/us/support/docs/ip/border-gateway-protocol-bgp/13754-26.html
+
+
