@@ -41,8 +41,9 @@ up in real architecture decisions.
 
 ### Anycast IPs & AWS Global Accelerator
 
-**Concept** — *Anycast* is an addressing method where the **same IP address is
-advertised from many locations at once**, and internet routing (BGP) delivers
+**Concept** — *Anycast* is an addressing method where the **same IP (Internet Protocol) address is
+advertised from many locations at once**, and internet routing via BGP (Border
+Gateway Protocol) delivers
 each user to the *nearest* one. Contrast with **unicast** (the normal case),
 where one IP maps to one server in one place: a user in Tokyo hitting a unicast
 IP in Virginia sends packets all the way to Virginia. With anycast, that same IP
@@ -56,12 +57,12 @@ IP, different physical endpoint.
   point of presence instead of crossing the public internet to a distant region.
 - **Availability & failover** — if one location goes down, BGP simply routes to
   the next-nearest one.
-- **DDoS resilience** — an attack is spread across many sites rather than
+- **DDoS (Distributed Denial of Service) resilience** — an attack is spread across many sites rather than
   concentrated on a single server.
 - **Stable entry point** — you get a fixed IP that "follows" the user
   geographically.
 
-**AWS Global Accelerator** is AWS's anycast offering: it gives you **two static
+**AWS Global Accelerator** (GA) is AWS's anycast offering: it gives you **two static
 anycast IP addresses** that act as a fixed front door. Users connect to the
 nearest AWS edge location via those IPs, then traffic rides the **AWS backbone**
 to your application in whichever Region is healthiest — with fast, sub-minute
@@ -69,19 +70,22 @@ failover.
 
 **Exam angle — don't confuse with:**
 
-- **vs CloudFront** — CloudFront *caches* HTTP/HTTPS content at the edge. Global
-  Accelerator does **not** cache; it just gets any **TCP/UDP** traffic onto the
-  AWS network fast and fails over quickly. Reach for GA for non-HTTP protocols,
-  gaming, IoT, VoIP, or when you need static IPs; reach for CloudFront for
+- **vs CloudFront** — CloudFront *caches* HTTP/HTTPS (Hypertext Transfer
+  Protocol / Secure) content at the edge. Global Accelerator does **not** cache;
+  it just gets any **TCP/UDP** (Transmission Control Protocol / User Datagram
+  Protocol) traffic onto the AWS network fast and fails over quickly. Reach for
+  GA for non-HTTP protocols, gaming, IoT (Internet of Things), VoIP (Voice over
+  IP), or when you need static IPs; reach for CloudFront for
   cacheable web content.
 - **vs Route 53 latency/geo routing** — Route 53 steers users by handing back
-  *different IPs* in DNS responses (subject to DNS caching/TTL). GA steers users
+  *different IPs* in DNS (Domain Name System) responses (subject to DNS
+  caching/TTL, Time To Live). GA steers users
   with a *single shared anycast IP*, so failover isn't gated on DNS propagation.
 - **vs Standard unicast + DNS** — DNS-based steering gives different users
   different addresses; anycast achieves steering with one address.
 
 **Scenario — design:** You're building a real-time multiplayer game backend on
-NLBs in `us-east-1` and `ap-northeast-1`. Players worldwide need the lowest
+NLBs (Network Load Balancers) in `us-east-1` and `ap-northeast-1`. Players worldwide need the lowest
 possible latency over UDP and a single stable endpoint to hard-code in the
 client. → **Global Accelerator**: two static anycast IPs, edge ingress onto the
 AWS backbone, automatic routing to the nearest healthy Region. CloudFront
