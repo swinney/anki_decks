@@ -34,14 +34,22 @@ up in real architecture decisions.
   - [Anycast IPs & AWS Global Accelerator](#anycast-ips--aws-global-accelerator)
   - [BGP — Border Gateway Protocol](#bgp--border-gateway-protocol)
   - [AWS Cloud Map](#aws-cloud-map)
+  - [AWS Transit Gateway](#aws-transit-gateway)
+  - [AWS App Mesh](#aws-app-mesh)
 - [Analytics](#analytics)
   - [Amazon Data Firehose](#amazon-data-firehose)
+  - [AWS Lake Formation](#aws-lake-formation)
 - [Management & Governance](#management--governance)
   - [AWS Control Tower](#aws-control-tower)
 - [Developer Tools](#developer-tools)
   - [AWS X-Ray](#aws-x-ray)
 - [Machine Learning & AI](#machine-learning--ai)
   - [Amazon Textract](#amazon-textract)
+- [Security, Identity & Compliance](#security-identity--compliance)
+  - [AWS Security Hub](#aws-security-hub)
+  - [AWS CloudHSM](#aws-cloudhsm)
+- [Storage](#storage)
+  - [Amazon EFS — Elastic File System](#amazon-efs--elastic-file-system)
 
 ---
 
@@ -196,7 +204,7 @@ tasks for you as they start and stop.
 **Exam angle — don't confuse with:**
 
 - **vs Route 53** — the key distinction. Route 53 is **DNS**: it resolves names
-  to IPs for internet/VPC routing. Cloud Map is an **application-level service
+  to IPs for internet/VPC (Virtual Private Cloud) routing. Cloud Map is an **application-level service
   registry** — it can track **non-IP** resources and arbitrary attributes, is
   queryable via API with health filtering, and uses Route 53 under the hood only
   for its DNS-based mode. Keyword cues: *"service discovery for microservices /
@@ -226,6 +234,101 @@ discover-by-name pattern the app already expects.
 - [AWS Cloud Map — product page](https://aws.amazon.com/cloud-map/)
 - [What is AWS Cloud Map? (Developer Guide)](https://docs.aws.amazon.com/cloud-map/latest/dg/what-is-cloud-map.html)
 - [ECS service discovery with Cloud Map](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-discovery.html)
+
+### AWS Transit Gateway
+
+**Concept** — Transit Gateway (TGW) is a **regional network hub** that connects
+many VPCs and on-premises networks (via Site-to-Site VPN or Direct Connect)
+through a **single gateway** — a hub-and-spoke model that replaces a tangle of
+point-to-point VPC peering connections. Each network *attaches* to the TGW, and
+**routing is transitive**: spokes can reach each other through the hub, governed
+by TGW route tables you control. It scales to thousands of VPCs, and you can
+**peer TGWs across Regions** for global connectivity or share one across
+accounts with Resource Access Manager (RAM).
+
+**Why it matters** — VPC peering is **1:1 and non-transitive**: A↔B and B↔C does
+*not* give A↔C, so connecting *n* VPCs into a full mesh needs ~n²/2 peering links
+to manage. As the environment grows that becomes unmanageable, and peering can't
+centralize on-prem connectivity. TGW collapses all of that into one hub with
+central route tables — far simpler to operate, segment, and extend to the data
+center.
+
+**Exam angle — don't confuse with:**
+
+- **vs VPC Peering** — the key pairing. Peering is **one-to-one,
+  non-transitive**, with no central routing — fine for a couple of VPCs. TGW is
+  the **scalable, transitive hub** for many VPCs plus on-prem. Keyword cues:
+  *"many VPCs / hub-and-spoke / transitive routing / connect on-prem at scale"*
+  → Transit Gateway; *"simple connection between two VPCs"* → VPC Peering.
+- **vs VPN / Direct Connect** — these are *how you reach on-prem*; TGW is the
+  *hub you attach them to*. They're complementary, not alternatives.
+- **vs VPC** — the VPC is the network itself; TGW is what **connects many VPCs
+  together**.
+
+**Scenario — design:** A company is standing up dozens of VPCs (per team and
+environment) that must communicate with each other and with the corporate data
+center. → **Transit Gateway**: attach every VPC plus a Direct Connect gateway to
+one hub, and control inter-VPC reachability with TGW route tables — no peering
+mesh to maintain.
+
+**Scenario — lift & shift:** You migrate a multi-site on-prem network with
+several data centers into AWS and need consolidated hybrid routing. → Terminate
+**Site-to-Site VPN** / **Direct Connect** on a **Transit Gateway** alongside the
+migrated VPCs for one central routing domain, and use cross-Region TGW peering if
+you need global reach.
+
+**Resources:**
+
+- [AWS Transit Gateway — product page](https://aws.amazon.com/transit-gateway/)
+- [What is a transit gateway? (User Guide)](https://docs.aws.amazon.com/vpc/latest/tgw/what-is-transit-gateway.html)
+- [Transit Gateway vs VPC peering design considerations](https://docs.aws.amazon.com/whitepapers/latest/building-scalable-secure-multi-vpc-network-infrastructure/transit-gateway.html)
+
+### AWS App Mesh
+
+**Concept** — App Mesh is a **service mesh**: it provides consistent
+application-level networking across your microservices. It runs an **Envoy proxy
+as a sidecar** next to each service, and those proxies handle all
+service-to-service traffic — routing, retries, timeouts, circuit breaking — and
+emit uniform metrics, logs, and traces. You configure this behavior **centrally
+without changing application code**, across ECS, EKS, EC2, and Kubernetes on AWS.
+
+**Why it matters** — In a microservices architecture, cross-cutting networking
+concerns — retries, traffic shifting for canary/blue-green releases, mutual TLS
+(mTLS, mutual Transport Layer Security), and consistent observability — otherwise
+get re-implemented in every service in every language. App Mesh moves them into
+the proxy layer, giving uniform traffic control and visibility independent of how
+each service is written.
+
+**Exam angle — don't confuse with:**
+
+- **vs AWS Cloud Map** — the exam's close pair. App Mesh is the **traffic
+  routing / proxy** layer (*how* traffic flows, via Envoy); Cloud Map is the
+  **service registry** (*where* things are). App Mesh can pull endpoints from
+  Cloud Map. Mesh = traffic control + observability; registry = discovery (see
+  [AWS Cloud Map](#aws-cloud-map)).
+- **vs API Gateway** — API Gateway is the managed **front door** for APIs
+  (north-south, external clients). App Mesh governs **east-west**,
+  service-to-service traffic *inside* the application.
+- **vs ELB** — a load balancer spreads inbound traffic across a service's
+  targets; App Mesh applies fine-grained routing rules **between** many
+  microservices.
+
+**Scenario — design:** Microservices on **EKS** need **canary deployments**
+(shift 5% of traffic to a new version), automatic retries, and uniform tracing —
+without coding that logic into each service. → **App Mesh** with Envoy sidecars:
+define virtual services and routes to weight traffic and get consistent
+observability across the fleet.
+
+**Scenario — lift & shift:** You migrate a microservices application that relied
+on a self-managed mesh (e.g., Istio) or bespoke per-service retry/observability
+libraries. → Adopt **App Mesh** to offload traffic management and telemetry to
+managed Envoy configuration, standardizing behavior across services without
+rewriting them.
+
+**Resources:**
+
+- [AWS App Mesh — product page](https://aws.amazon.com/app-mesh/)
+- [What is AWS App Mesh? (User Guide)](https://docs.aws.amazon.com/app-mesh/latest/userguide/what-is-app-mesh.html)
 
 ## Analytics
 
@@ -278,6 +381,51 @@ self-managed forwarders/buffering layer with a managed stream you don't operate.
 - [Amazon Data Firehose — Developer Guide](https://docs.aws.amazon.com/firehose/latest/dev/what-is-this-service.html)
 - [Kinesis Data Streams vs Data Firehose (FAQ)](https://aws.amazon.com/kinesis/data-firehose/faqs/)
 
+### AWS Lake Formation
+
+**Concept** — Lake Formation makes it easy to **build, secure, and govern a data
+lake on S3**. It sits on top of the **AWS Glue Data Catalog** and adds
+**centralized, fine-grained permissions** — database-, table-, column-, row-, and
+cell-level access control — enforced consistently across analytics engines
+(Athena, Redshift Spectrum, EMR, Glue, QuickSight). Instead of juggling scattered
+S3 bucket policies and IAM, you register your S3 locations once and grant
+catalog-level permissions in a single place.
+
+**Why it matters** — Securing a data lake with raw S3 and IAM policies is coarse
+and error-prone: you can't easily express "this analyst sees these columns but
+not the salary column" and have it hold across every query engine. Lake Formation
+centralizes that governance over the shared Glue catalog, so the **same
+fine-grained rules apply no matter which tool reads the data**.
+
+**Exam angle — don't confuse with:**
+
+- **vs AWS Glue** — the key pairing. Glue is the **serverless ETL (Extract,
+  Transform, Load) and Data Catalog** — the jobs, crawlers, and metadata/schema.
+  Lake Formation **adds the governance and fine-grained permission layer on top
+  of the Glue catalog**. Keyword cues: *"fine-grained / column- or row-level /
+  centralized data-lake permissions / data-lake security"* → Lake Formation;
+  *"ETL jobs / crawlers / data catalog"* → Glue.
+- **vs IAM / S3 bucket policies** — those are coarse (bucket/prefix/object level).
+  Lake Formation provides **table/column/row-level** control that IAM alone can't
+  express, applied consistently across the analytics services.
+
+**Scenario — design:** You're building a data lake on S3 queried by **Athena**
+and **Redshift Spectrum**, where different teams must see different
+columns/rows (PII restricted to a few roles). → **Lake Formation**: register the
+S3 location, define databases/tables in the Glue catalog, and grant fine-grained
+permissions centrally so every engine enforces them identically.
+
+**Scenario — lift & shift:** During migration you consolidate siloed datasets
+into one central data lake and need governed cross-team access without per-bucket
+policy sprawl. → Use **Lake Formation** to centralize permissions over the Glue
+catalog, replacing scattered S3/IAM rules with one consistent governance layer.
+
+**Resources:**
+
+- [AWS Lake Formation — product page](https://aws.amazon.com/lake-formation/)
+- [What is AWS Lake Formation? (Developer Guide)](https://docs.aws.amazon.com/lake-formation/latest/dg/what-is-lake-formation.html)
+- [Lake Formation fine-grained access control](https://docs.aws.amazon.com/lake-formation/latest/dg/access-control-fine-grained.html)
+
 ## Management & Governance
 
 ### AWS Control Tower
@@ -289,7 +437,8 @@ underlying services; it **orchestrates** them: AWS Organizations (account
 structure, Organizational Units (OUs), and Service Control Policies (SCPs)), AWS
 Config (records and evaluates resource configuration), CloudFormation/Service
 Catalog (Account Factory, which vends standardized new accounts), and IAM
-Identity Center (workforce single sign-on (SSO)). It bootstraps a dedicated
+(Identity and Access Management) Identity Center (workforce single sign-on
+(SSO)). It bootstraps a dedicated
 **log archive** and **audit** account, applies **guardrails**, and gives you a
 dashboard over the whole org.
 
@@ -439,3 +588,167 @@ downstream database.
 - [Amazon Textract — product page](https://aws.amazon.com/textract/)
 - [What is Amazon Textract? (Developer Guide)](https://docs.aws.amazon.com/textract/latest/dg/what-is.html)
 - [Textract — analyzing documents (forms, tables, queries)](https://docs.aws.amazon.com/textract/latest/dg/how-it-works-analyzing.html)
+
+## Security, Identity & Compliance
+
+### AWS Security Hub
+
+**Concept** — Security Hub is a **Cloud Security Posture Management (CSPM)**
+service — a **single pane of glass** that aggregates, normalizes, and
+prioritizes security findings from across your AWS security services (GuardDuty,
+Inspector, Macie, IAM Access Analyzer, Firewall Manager) and partner tools,
+into one standard format (the AWS Security Finding Format (ASFF)). On top of
+aggregation it runs **automated best-practice and compliance checks** against
+standards like the CIS (Center for Internet Security) AWS Foundations Benchmark,
+AWS Foundational Security Best Practices, and PCI DSS — producing a security
+**score** and per-account/per-Region rollups. It is **not a detector itself**;
+it's the layer that consolidates what the detectors find.
+
+**Why it matters** — In a real environment, findings are scattered across many
+tools and many accounts, each with its own console and format. Security Hub
+pulls them into one prioritized, normalized view, continuously grades the
+environment against compliance standards, and (via EventBridge) lets you trigger
+automated response/remediation. It turns "alerts in ten places" into "one
+ranked worklist and a posture score."
+
+**Exam angle — don't confuse with:**
+
+- **vs GuardDuty / Inspector / Macie** — these are the **finding sources**;
+  Security Hub **aggregates** them. GuardDuty = threat detection from logs/network
+  telemetry; Inspector = vulnerability scanning of EC2/ECR/Lambda; Macie =
+  sensitive-data (PII, Personally Identifiable Information) discovery in S3.
+  Keyword cues: *"single pane / aggregate findings across services / compliance
+  standard checks / security score"* → Security Hub; *"detect threats"* →
+  GuardDuty; *"scan for vulnerabilities"* → Inspector; *"find sensitive data in
+  S3"* → Macie.
+- **vs AWS Config** — Config is the **resource-configuration compliance engine**
+  (records state, evaluates config rules); Security Hub *uses* Config rules under
+  its standards but aggregates security findings far more broadly. Config =
+  configuration compliance; Security Hub = security-findings aggregation +
+  standards.
+- **vs Amazon Detective** — Detective is for **deep investigation/root-cause** of
+  a specific finding (it visualizes and analyzes the behavior behind it);
+  Security Hub **aggregates and prioritizes**. Aggregation → Security Hub;
+  investigation → Detective.
+
+**Scenario — design:** A multi-account organization already runs GuardDuty,
+Inspector, and Macie, and the security team wants one prioritized view plus
+continuous CIS compliance checks across every account. → Enable **Security Hub**
+with a **delegated administrator** account in AWS Organizations, aggregate
+findings across accounts and Regions, turn on the standards, and route critical
+findings through **EventBridge** to a ticketing system or a Lambda remediation.
+
+**Scenario — lift & shift:** An organization migrating workloads must
+demonstrate compliance (e.g., CIS or PCI DSS) and consolidate security alerts
+that were previously siloed per team. → **Security Hub** enables the relevant
+best-practice standards and consolidates all findings into one dashboard and
+score, giving auditors a single source instead of scattered tool outputs.
+
+**Resources:**
+
+- [AWS Security Hub — product page](https://aws.amazon.com/security-hub/)
+- [What is AWS Security Hub? (User Guide)](https://docs.aws.amazon.com/securityhub/latest/userguide/what-is-securityhub.html)
+- [Security Hub standards and controls](https://docs.aws.amazon.com/securityhub/latest/userguide/standards-reference.html)
+
+### AWS CloudHSM
+
+**Concept** — CloudHSM gives you **dedicated, single-tenant Hardware Security
+Modules (HSMs)** in the AWS cloud to generate, store, and use your own encryption
+keys. The HSMs are **FIPS (Federal Information Processing Standards) 140-2 Level
+3** validated, and **only you** can access the key material — AWS operates the
+hardware and availability but cannot see your keys. You use them through
+industry-standard interfaces (PKCS#11, JCE, CNG) and run a **cluster of HSMs
+across AZs** for high availability.
+
+**Why it matters** — Some regulated workloads must keep cryptographic keys in
+**single-tenant, customer-controlled, tamper-resistant hardware** at FIPS 140-2
+Level 3 — a bar the shared, multi-tenant model doesn't meet for them, or they
+need direct control over specific cryptographic operations (TLS offload, code
+signing, custom certificate authorities). CloudHSM provides that hardware while
+AWS handles provisioning and durability.
+
+**Exam angle — don't confuse with:**
+
+- **vs AWS KMS** — the key pairing. KMS is **shared, fully managed, multi-tenant,
+  cheap, and deeply integrated** with AWS services — AWS manages the keys for
+  you. CloudHSM is a **dedicated, single-tenant HSM** under your full control at
+  FIPS 140-2 Level 3 — more power and compliance, but you own the operational
+  burden. Keyword cues: *"dedicated / single-tenant HSM / full control / FIPS
+  140-2 Level 3 / regulatory mandate"* → CloudHSM; *"easy managed key management
+  integrated across AWS"* → KMS. (KMS can use a **CloudHSM-backed custom key
+  store** to combine the two.)
+- **vs AWS Secrets Manager** — different problem entirely: Secrets Manager stores
+  and **rotates secrets** (database credentials, API keys); CloudHSM (and KMS)
+  manage **encryption keys**. Keys vs secrets.
+
+**Scenario — design:** A payments platform is contractually required to keep its
+cryptographic keys in customer-controlled, single-tenant, FIPS 140-2 Level 3
+hardware. → **CloudHSM** cluster across AZs for the keys, optionally fronted by a
+**KMS custom key store** so AWS services can still integrate while the key
+material stays in your HSMs.
+
+**Scenario — lift & shift:** You migrate an on-prem application that already
+performs cryptographic operations against **on-prem HSMs via PKCS#11**. →
+**CloudHSM** offers equivalent dedicated HSMs in AWS exposing the same standard
+interfaces, so the application's crypto integration ports over with minimal
+change.
+
+**Resources:**
+
+- [AWS CloudHSM — product page](https://aws.amazon.com/cloudhsm/)
+- [What is AWS CloudHSM? (User Guide)](https://docs.aws.amazon.com/cloudhsm/latest/userguide/introduction.html)
+- [KMS custom key store backed by CloudHSM](https://docs.aws.amazon.com/kms/latest/developerguide/keystore-cloudhsm.html)
+
+## Storage
+
+### Amazon EFS — Elastic File System
+
+**Concept** — EFS is a **fully managed, elastic NFS (Network File System) file
+system for Linux**. It provides a shared, POSIX (Portable Operating System
+Interface)-compliant file system that **many compute resources can mount at the
+same time** — EC2 instances, Lambda functions, and ECS/EKS containers — across
+multiple Availability Zones in a Region. Capacity grows and shrinks
+automatically as you add or remove files (you pay for what you store, with no
+provisioning), and lifecycle policies can tier cold files to **Infrequent
+Access (IA)** to cut cost. Standard EFS is **multi-AZ by default**; a cheaper
+**One Zone** option keeps data in a single AZ.
+
+**Why it matters** — When multiple instances need to **read and write the same
+files concurrently** — shared web/CMS content, home directories, container
+persistent storage, shared datasets — block storage doesn't fit: an EBS volume
+attaches to one instance and lives in one AZ. EFS is the regional, multi-AZ,
+fully managed shared file system that scales itself, so an Auto Scaling fleet
+spread across AZs can all see the same data with no capacity planning.
+
+**Exam angle — don't confuse with:**
+
+- **vs Amazon EBS** — the most common pairing. EBS is **block storage attached
+  to a single EC2 instance** and locked to **one AZ** (multi-attach is a narrow
+  exception). EFS is **shared file storage** mounted by **many instances across
+  AZs**. Keyword cues: *"shared across many instances / multi-AZ / Linux NFS"* →
+  EFS; *"single-instance boot or data volume / low-latency block"* → EBS.
+- **vs Amazon FSx** — EFS is **Linux/NFS only**. FSx provides managed
+  *third-party* file systems: **FSx for Windows** (SMB (Server Message Block) /
+  Active Directory), **Lustre** (HPC (High Performance Computing)), NetApp
+  ONTAP, and OpenZFS. Keyword cues: *"Windows / SMB"* or *"high-performance
+  Lustre"* → FSx; *"shared Linux NFS"* → EFS.
+- **vs Amazon S3** — S3 is **object storage via an HTTP API**, not a mountable
+  file system. Reach for EFS when applications need a real POSIX file system to
+  `mount`.
+
+**Scenario — design:** You're running a web application on an **Auto Scaling
+group of EC2 instances spread across AZs**, and every instance must serve the
+same user-uploaded content and CMS files. → Mount **EFS** on all instances: one
+shared, multi-AZ, elastic file system, instead of trying to keep per-instance
+EBS volumes in sync.
+
+**Scenario — lift & shift:** You migrate an on-prem Linux application that
+expects a **shared NFS mount** from a NAS appliance. → Stand up **EFS** as a
+drop-in NFS file system, mount it from the migrated EC2 instances, and use
+**DataSync** to transfer the existing files — no application rewrite needed.
+
+**Resources:**
+
+- [Amazon EFS — product page](https://aws.amazon.com/efs/)
+- [What is Amazon EFS? (User Guide)](https://docs.aws.amazon.com/efs/latest/ug/whatisefs.html)
+- [EFS storage classes and lifecycle management](https://docs.aws.amazon.com/efs/latest/ug/storage-classes.html)
