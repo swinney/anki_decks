@@ -32,6 +32,7 @@ up in real architecture decisions.
 
 - [Networking & Content Delivery](#networking--content-delivery)
   - [Anycast IPs & AWS Global Accelerator](#anycast-ips--aws-global-accelerator)
+  - [BGP — Border Gateway Protocol](#bgp--border-gateway-protocol)
 
 ---
 
@@ -107,38 +108,58 @@ behind them without ever touching the client config.
 - [CloudFront — product page](https://aws.amazon.com/cloudfront/)
 - [Route 53 routing policies](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/routing-policy.html)
 
-- BGP (Border Gateway Protocol) is the routing protocol that powers the internet. Think of it as the internet's postal service or GPS: it evaluates all available network paths and determines the most efficient route for data to travel from one network to another. [1, 2, 3, 4]  
-How BGP Works 
-The internet is not a single, massive network; it is a collection of thousands of smaller, interconnected networks called Autonomous Systems (AS). These are owned by Internet Service Providers (ISPs), large enterprises, and tech giants. [3, 4, 5]  
-When data crosses the globe, it must jump between these different systems. BGP facilitates this by performing three primary tasks: 
+### BGP — Border Gateway Protocol
 
-• Path Selection: It analyzes all possible routes and chooses the best path based on network rules, policies, and efficiency rather than just the shortest physical distance. 
-• Route Advertisement: BGP-enabled routers constantly share (or "advertise") their reachability information, announcing which IP address ranges they can connect to. 
-• Policy Control: Network administrators can set BGP policies to prioritize certain routes, avoid congested networks, or balance internet traffic. [8, 9]  
+**Concept** — BGP is the routing protocol that runs the internet — think of it
+as the internet's postal service, choosing how data gets from one network to
+another. The internet isn't one network but thousands of independently operated
+ones called **Autonomous Systems (AS)**, owned by Internet Service Providers
+(ISPs), large enterprises, and cloud providers. BGP is how those systems
+advertise to each other which IP address ranges they can reach, so a packet can
+hop network-to-network all the way to its destination. Crucially, it selects
+paths by configured **policy** (peering and business rules), not simply the
+shortest physical distance. It does three things:
 
-BGP: Internal vs. External 
-BGP operates in two distinct ways depending on where the data is traveling: 
+- **Path selection** — evaluates available routes and picks the best per policy.
+- **Route advertisement** — routers announce the IP ranges they can reach.
+- **Policy control** — operators prioritize, avoid, or balance routes.
 
-• eBGP (External BGP): Used to exchange routing information between different Autonomous Systems (e.g., connecting your ISP's network to a neighboring ISP's network). 
-• iBGP (Internal BGP): Used to share routing information within a single Autonomous System (e.g., a massive data center distributing traffic across its own internal servers). [8]  
+Two flavors: **eBGP (external BGP)** exchanges routes *between* different
+Autonomous Systems (e.g., your ISP to a neighboring ISP); **iBGP (internal
+BGP)** shares routes *within* a single AS.
 
-Why BGP is Essential 
-Without BGP, the global internet would not function. It is highly scalable, supports multihoming (allowing an organization to connect to multiple ISPs for redundancy), and automatically updates routing tables if a specific connection fails. [1, 3, 8, 10]  
-Because of its foundational role, a misconfigured BGP update can cause massive, global internet outages. To learn more about how internet infrastructure utilizes this protocol, explore Cloudflare's BGP Guide or the Cisco BGP Documentation. [1, 3, 11, 12]  
+**Why it matters** — BGP is what makes dynamic, resilient routing possible: it
+supports **multihoming** (connecting to multiple ISPs for redundancy) and
+automatically updates routing tables when a link fails. The flip side is that a
+misconfigured BGP advertisement can trigger large-scale internet outages. In
+AWS, BGP is the mechanism behind anycast (Global Accelerator) and behind dynamic
+routing on hybrid connectivity.
 
-AI can make mistakes, so double-check responses
+**Exam angle — where BGP shows up:**
 
-[1] https://www.cloudflare.com/learning/security/glossary/what-is-bgp/
-[2] https://networklessons.com/bgp
-[3] https://community.cisco.com/t5/network-management/what-is-bgp-for-beginners/td-p/5136090
-[4] https://aws.amazon.com/what-is/border-gateway-protocol/
-[5] https://www.youtube.com/watch?v=A1KXPpqlNZ4
-[6] https://www.youtube.com/watch?v=ibK1OpjILk0
-[7] https://www.thousandeyes.com/learning/glossary/bgp-border-gateway-protocol
-[8] https://www.geeksforgeeks.org/computer-networks/border-gateway-protocol-bgp/
-[9] https://www.kentik.com/kentipedia/what-is-bgp-border-gateway-protocol/
-[10] https://www.reddit.com/r/selfhosted/comments/1d72t2d/what_does_bgp_do_exactly/
-[11] https://www.ntia.gov/programs-and-initiatives/border-gateway-protocol
-[12] https://www.cisco.com/c/en/us/support/docs/ip/border-gateway-protocol-bgp/13754-26.html
+- **Direct Connect and Site-to-Site VPN use BGP** for *dynamic* routing — routes
+  are exchanged and failover happens automatically. Contrast with **static
+  routing** on a VPN, where you hand-configure routes and there's no automatic
+  reconvergence.
+- **vs static routes** — BGP adapts when a path dies; static routes don't.
+- **Underpins anycast / Global Accelerator** — the "route to the nearest healthy
+  location" behavior of anycast is BGP doing path selection (see
+  [Anycast IPs & AWS Global Accelerator](#anycast-ips--aws-global-accelerator)).
 
+**Scenario — design:** You're building hybrid connectivity with a primary
+**Direct Connect** link and a **Site-to-Site VPN** as backup, and you want
+traffic to fail over automatically if Direct Connect drops. → Run **BGP** on
+both connections and advertise the same prefixes with path preferences; BGP
+reroutes to the VPN on failure with no manual route changes.
 
+**Scenario — lift & shift:** You migrate an on-prem network that already
+**multihomes across two ISPs** using BGP and its own AS number. Connecting to
+AWS over Direct Connect, you keep using BGP to exchange routes dynamically,
+preserving the redundancy model you already operate.
+
+**Resources:**
+
+- [AWS — What is BGP?](https://aws.amazon.com/what-is/border-gateway-protocol/)
+- [Cloudflare — What is BGP?](https://www.cloudflare.com/learning/security/glossary/what-is-bgp/)
+- [Direct Connect — routing policies and BGP communities](https://docs.aws.amazon.com/directconnect/latest/UserGuide/routing-and-bgp.html)
+- [Site-to-Site VPN — routing options (static vs BGP)](https://docs.aws.amazon.com/vpn/latest/s2svpn/VPNRoutingTypes.html)
