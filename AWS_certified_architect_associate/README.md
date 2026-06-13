@@ -25,10 +25,17 @@ associated services.
 | `deck_versions/AWS_Services_v1.apkg` | v1 snapshot (no exam fields). |
 | `deck_versions/AWS_Services_v2.apkg` | v2 snapshot (current). |
 
+## Environment setup
+
+```bash
+conda env create -f environment.yml
+conda activate aws-saa-anki
+```
+
 ## Rebuilding the deck
 
 ```bash
-pip install genanki
+conda activate aws-saa-anki   # or: pip install genanki
 cd deck_versions
 python3 build_deck_v2.py   # writes AWS_Services.apkg
 ```
