@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """v2: AWS service Anki deck with SAA-C03 exam fields
 (Pick this when / Don't confuse with / Resilience scope)."""
+import os
 import html
 import hashlib
 import genanki
@@ -85,6 +86,6 @@ for name, cat, desc, assoc in SERVICES:
     )
     deck.add_note(note)
 
-out = "/sessions/adoring-funny-hopper/mnt/outputs/AWS_Services.apkg"
+out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "AWS_Services.apkg")
 genanki.Package(deck).write_to_file(out)
-print(f"Wrote {len(SERVICES)} cards to {out}")
+print(f"Wrote {len(SERVICES)} cards to {os.path.normpath(out)}")

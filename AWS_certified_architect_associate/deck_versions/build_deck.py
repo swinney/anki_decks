@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Build an Anki .apkg deck of exam-relevant AWS services."""
+import os
 import html
 import genanki
 
@@ -308,6 +309,10 @@ if __name__ == "__main__":
         )
         deck.add_note(note)
 
-    out = "/sessions/adoring-funny-hopper/mnt/outputs/AWS_Services.apkg"
+    # Note: build_deck_v2.py is the canonical builder. Running this module
+    # directly rebuilds the legacy v1 (links-only) deck as a separate file
+    # so it won't clobber the shipped AWS_Services.apkg.
+    out = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                       "AWS_Services_v1.apkg")
     genanki.Package(deck).write_to_file(out)
-    print(f"Wrote {len(SERVICES)} cards to {out}")
+    print(f"Wrote {len(SERVICES)} cards to {os.path.normpath(out)}")
