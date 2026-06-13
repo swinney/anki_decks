@@ -38,6 +38,8 @@ up in real architecture decisions.
   - [Amazon Data Firehose](#amazon-data-firehose)
 - [Management & Governance](#management--governance)
   - [AWS Control Tower](#aws-control-tower)
+- [Developer Tools](#developer-tools)
+  - [AWS X-Ray](#aws-x-ray)
 
 ---
 
@@ -330,3 +332,56 @@ that were previously ungoverned (subject to Control Tower's prerequisites).
 - [AWS Control Tower — product page](https://aws.amazon.com/controltower/)
 - [What is AWS Control Tower? (User Guide)](https://docs.aws.amazon.com/controltower/latest/userguide/what-is-control-tower.html)
 - [Control Tower controls (guardrails) reference](https://docs.aws.amazon.com/controltower/latest/controlreference/controls.html)
+
+## Developer Tools
+
+### AWS X-Ray
+
+**Concept** — X-Ray is a **distributed tracing** service: it follows a single
+request as it travels through all the components of a distributed or serverless
+application and stitches the hops together into one **end-to-end trace**. From
+those traces it builds a **service map** — a visual graph of how your services
+call each other, annotated with latency, error rates, and faults at each node.
+You instrument the app (via the X-Ray SDK (Software Development Kit), or
+automatically for Lambda and API Gateway), X-Ray **samples** requests to keep
+overhead low, and each trace is broken into **segments and subsegments** that
+capture timing, metadata, and errors per hop.
+
+**Why it matters** — In a microservices or serverless architecture, one user
+request fans out across many services, so when it's slow or failing, metrics and
+logs alone can't tell you *which hop* is to blame. X-Ray pinpoints the offending
+service or dependency on the request path and surfaces latency bottlenecks and
+error hot spots that are otherwise invisible end-to-end. It integrates with
+Lambda, API Gateway, ECS, EC2, Elastic Beanstalk, and App Mesh.
+
+**Exam angle — don't confuse with:**
+
+- **vs CloudWatch** — the key pairing. CloudWatch is **metrics, logs, alarms,
+  and dashboards** — the *"what and how much"* (CPU high? error count up?). X-Ray
+  is **traces and the service map** — the *"where in the request path"*. They're
+  complementary: CloudWatch tells you something is wrong; X-Ray tells you which
+  service caused it. Keyword cues: *"trace a request across microservices / find
+  the latency bottleneck / service map"* → X-Ray; *"metric / alarm / log /
+  dashboard"* → CloudWatch.
+- **vs CloudTrail** — easy to mix up by name. CloudTrail is an **audit log of
+  AWS API calls** (who did what to your account, for governance/compliance).
+  X-Ray traces **application requests** for performance and debugging. Audit
+  trail → CloudTrail; request trace → X-Ray.
+
+**Scenario — design:** You're building a serverless API — API Gateway → Lambda →
+DynamoDB — and users report intermittent slowness you can't reproduce. → Enable
+**X-Ray** tracing on API Gateway and Lambda; the service map and trace timeline
+show whether the latency is in the function, a downstream call, or DynamoDB,
+without adding manual logging to every layer.
+
+**Scenario — lift & shift:** You've decomposed a migrated monolith into
+microservices running on ECS and lost the single-process call stack you used to
+debug with. → Instrument the services with the **X-Ray SDK** (or pull traces via
+the **App Mesh** integration) to regain end-to-end visibility across the new
+inter-service calls.
+
+**Resources:**
+
+- [AWS X-Ray — product page](https://aws.amazon.com/xray/)
+- [What is AWS X-Ray? (Developer Guide)](https://docs.aws.amazon.com/xray/latest/devguide/aws-xray.html)
+- [X-Ray concepts: traces, segments, service map](https://docs.aws.amazon.com/xray/latest/devguide/xray-concepts.html)
