@@ -366,6 +366,44 @@ integrations to analytics stores. That makes it the default glue for
 - **vs Lambda-only pipelines** — you *can* hand-roll ingestion with Lambda, but
   Firehose owns the buffering/batching/retry so you don't operate it.
 
+**Research use cases — Harvard Business School**
+
+Firehose fits research that **accumulates a continuous event stream into a data
+lake for later analysis** — the "deliver, don't process" pattern. Common
+streaming sources for business/social-science research:
+
+- **Markets & finance** — real-time trades/quotes/order-book updates for
+  market-microstructure or asset-pricing studies; crypto/blockchain transactions
+  or ad real-time-bidding logs for fintech and digital-advertising research.
+- **Text & social** — social-media and news/press-release feeds for information
+  diffusion, sentiment, and **event studies** around corporate announcements
+  (lands raw, then analyzed with [Amazon Comprehend](#amazon-comprehend)).
+- **Behavior & platforms** — clickstream and app-event data from online field
+  experiments / A-B tests; e-commerce order or point-of-sale streams for
+  operations and marketing research.
+- **Physical-world & IoT** — retail foot-traffic, supply-chain, or wearable
+  sensor telemetry; mobility feeds (transit, ride-share) as economic-activity
+  proxies.
+- **The researcher's own instruments** — logs from a deployed survey or
+  experiment site streamed straight to S3, with no consumer to operate.
+
+The connecting thread: capture the stream into S3 (often Parquet via Firehose's
+format conversion) and analyze later with Athena, Comprehend, or your stats
+tooling — which is exactly when you pick **Firehose over Kinesis Data Streams**
+(choose Data Streams only if you need custom real-time processing or replay).
+
+```mermaid
+flowchart LR
+    S1["Market data feed"] --> FH
+    S2["Social media / news API"] --> FH
+    S3src["Clickstream / experiment app"] --> FH
+    S4["IoT / sensor telemetry"] --> FH
+    FH["Amazon Data Firehose<br/>buffer + Parquet conversion"] --> L[("Amazon S3<br/>research data lake")]
+    L --> A["Athena (SQL)"]
+    L --> C["Comprehend (NLP)"]
+    L --> R["R / Python / Stata"]
+```
+
 **Scenario — design:** You're building clickstream analytics for a new web app.
 Events must land in an S3 data lake (and a Redshift table) for near-real-time
 dashboards, and the team doesn't want to run streaming consumers. → **Amazon
