@@ -1,4 +1,4 @@
-name: aws-saa-anki
+name: anki_decks
 channels:
   - conda-forge
 dependencies:

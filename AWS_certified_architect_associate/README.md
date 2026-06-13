@@ -29,13 +29,13 @@ associated services.
 
 ```bash
 conda env create -f environment.yml
-conda activate aws-saa-anki
+conda activate anki_decks
 ```
 
 ## Rebuilding the deck
 
 ```bash
-conda activate aws-saa-anki   # or: pip install genanki
+conda activate anki_decks   # or: pip install genanki
 cd deck_versions
 python3 build_deck_v2.py   # writes AWS_Services.apkg
 ```
