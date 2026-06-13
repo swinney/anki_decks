@@ -674,7 +674,8 @@ Inspector, Macie, IAM Access Analyzer, Firewall Manager) and partner tools,
 into one standard format (the AWS Security Finding Format (ASFF)). On top of
 aggregation it runs **automated best-practice and compliance checks** against
 standards like the CIS (Center for Internet Security) AWS Foundations Benchmark,
-AWS Foundational Security Best Practices, and PCI DSS — producing a security
+AWS Foundational Security Best Practices, and PCI DSS (Payment Card Industry
+Data Security Standard) — producing a security
 **score** and per-account/per-Region rollups. It is **not a detector itself**;
 it's the layer that consolidates what the detectors find.
 
@@ -731,7 +732,8 @@ Modules (HSMs)** in the AWS cloud to generate, store, and use your own encryptio
 keys. The HSMs are **FIPS (Federal Information Processing Standards) 140-2 Level
 3** validated, and **only you** can access the key material — AWS operates the
 hardware and availability but cannot see your keys. You use them through
-industry-standard interfaces (PKCS#11, JCE, CNG) and run a **cluster of HSMs
+industry-standard interfaces — PKCS#11, JCE (Java Cryptography Extension), and
+CNG (Cryptography API: Next Generation) — and run a **cluster of HSMs
 across AZs** for high availability.
 
 **Why it matters** — Some regulated workloads must keep cryptographic keys in
@@ -788,7 +790,7 @@ Access (IA)** to cut cost. Standard EFS is **multi-AZ by default**; a cheaper
 **One Zone** option keeps data in a single AZ.
 
 **Why it matters** — When multiple instances need to **read and write the same
-files concurrently** — shared web/CMS content, home directories, container
+files concurrently** — shared web/CMS (Content Management System) content, home directories, container
 persistent storage, shared datasets — block storage doesn't fit: an EBS volume
 attaches to one instance and lives in one AZ. EFS is the regional, multi-AZ,
 fully managed shared file system that scales itself, so an Auto Scaling fleet
@@ -817,7 +819,7 @@ shared, multi-AZ, elastic file system, instead of trying to keep per-instance
 EBS volumes in sync.
 
 **Scenario — lift & shift:** You migrate an on-prem Linux application that
-expects a **shared NFS mount** from a NAS appliance. → Stand up **EFS** as a
+expects a **shared NFS mount** from a NAS (Network Attached Storage) appliance. → Stand up **EFS** as a
 drop-in NFS file system, mount it from the migrated EC2 instances, and use
 **DataSync** to transfer the existing files — no application rewrite needed.
 
