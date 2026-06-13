@@ -40,6 +40,8 @@ up in real architecture decisions.
   - [AWS Control Tower](#aws-control-tower)
 - [Developer Tools](#developer-tools)
   - [AWS X-Ray](#aws-x-ray)
+- [Machine Learning & AI](#machine-learning--ai)
+  - [Amazon Textract](#amazon-textract)
 
 ---
 
@@ -385,3 +387,55 @@ inter-service calls.
 - [AWS X-Ray — product page](https://aws.amazon.com/xray/)
 - [What is AWS X-Ray? (Developer Guide)](https://docs.aws.amazon.com/xray/latest/devguide/aws-xray.html)
 - [X-Ray concepts: traces, segments, service map](https://docs.aws.amazon.com/xray/latest/devguide/xray-concepts.html)
+
+## Machine Learning & AI
+
+### Amazon Textract
+
+**Concept** — Textract is a fully managed service that **automatically extracts
+text, handwriting, tables, and form data from scanned documents, PDFs (Portable
+Document Format), and images**. It goes beyond plain OCR (Optical Character
+Recognition) — instead of returning a flat blob of characters, it **understands
+document structure**, pulling out key-value pairs from forms and rows/cells from
+tables with confidence scores. No machine-learning experience is needed: you
+call an API and get back structured data. Purpose-built operations exist for
+common documents — `AnalyzeExpense` (invoices/receipts), `AnalyzeID` (identity
+documents), and `Queries` (ask natural-language questions of a document).
+
+**Why it matters** — Digitizing documents by hand is slow and error-prone, and
+basic OCR loses the structure that makes the data useful. Textract preserves
+relationships — *this label goes with this value*, *this cell belongs to this
+column* — so downstream systems can consume the output directly instead of
+re-parsing free text. It's the standard first stage of a document-processing
+pipeline, frequently feeding its text into Comprehend for further analysis.
+
+**Exam angle — don't confuse with:**
+
+- **vs Amazon Rekognition** — both can "read text," but the input differs.
+  Rekognition finds text *in scenes/photos and video* (a street sign, a label)
+  alongside object/face detection. Textract extracts text *and structure* from
+  *documents, forms, and tables*. Keyword cues: *"scanned documents / invoices /
+  forms / tables"* → Textract; *"objects, faces, or text in photos and video"* →
+  Rekognition.
+- **vs Amazon Comprehend** — these **chain**, they don't compete. Textract
+  *extracts* the raw text; Comprehend does NLP (Natural Language Processing) on
+  that text — entities, sentiment, key phrases, language. Extraction → Textract;
+  understanding/analysis → Comprehend.
+
+**Scenario — design:** You're building a serverless invoice-processing pipeline.
+Users upload scanned invoices to S3, and you need vendor, total, and line items
+as structured fields. → S3 event → **Lambda** → **Textract `AnalyzeExpense`**
+extracts the fields, which you store in DynamoDB (optionally passing free-text
+notes to **Comprehend**). No OCR servers to run and structure is preserved.
+
+**Scenario — lift & shift:** A company migrates a document workflow that today
+relies on **manual data entry** (or a self-hosted OCR tool) to key form fields
+into a database. → Replace that step with **Textract** form/table extraction to
+auto-populate the fields, cutting manual keying while keeping the existing
+downstream database.
+
+**Resources:**
+
+- [Amazon Textract — product page](https://aws.amazon.com/textract/)
+- [What is Amazon Textract? (Developer Guide)](https://docs.aws.amazon.com/textract/latest/dg/what-is.html)
+- [Textract — analyzing documents (forms, tables, queries)](https://docs.aws.amazon.com/textract/latest/dg/how-it-works-analyzing.html)
