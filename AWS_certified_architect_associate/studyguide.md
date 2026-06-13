@@ -51,6 +51,8 @@ up in real architecture decisions.
   - [AWS CloudHSM](#aws-cloudhsm)
 - [Storage](#storage)
   - [Amazon EFS — Elastic File System](#amazon-efs--elastic-file-system)
+- [Applied Solutions](#applied-solutions)
+  - [HBS case study — digitizing decades of bankruptcy filings](#hbs-case-study--digitizing-decades-of-bankruptcy-filings)
 
 ---
 
@@ -828,3 +830,98 @@ drop-in NFS file system, mount it from the migrated EC2 instances, and use
 - [Amazon EFS — product page](https://aws.amazon.com/efs/)
 - [What is Amazon EFS? (User Guide)](https://docs.aws.amazon.com/efs/latest/ug/whatisefs.html)
 - [EFS storage classes and lifecycle management](https://docs.aws.amazon.com/efs/latest/ug/storage-classes.html)
+
+## Applied Solutions
+
+End-to-end, multi-service walkthroughs. Unlike the per-service topics above,
+these show how several services combine to solve one real problem.
+
+### HBS case study — digitizing decades of bankruptcy filings
+
+**Problem** — A Harvard Business School researcher has **decades of bankruptcy
+documentation**: each item is a **40–50 page** filing, held as **PDFs or scanned
+paper documents**. The work is to (1) **ingest** the files, (2) absorb the
+**storage burden** of large scanned images, (3) run **OCR** to make the pages
+machine-readable, and (4) **extract structured data** for later analysis — at a
+scale of thousands of multi-page documents.
+
+**Solution architecture**
+
+```mermaid
+flowchart TD
+    A["Scanned PDFs / paper<br/>(40–50 pages each)"] -->|"Snowball / DataSync"| B[("Amazon S3<br/>raw data lake")]
+    B -->|"S3 upload event"| C["Lambda<br/>start Textract job"]
+
+    subgraph Orchestration["Step Functions orchestration"]
+        C --> D["Amazon Textract<br/>async OCR + tables/forms"]
+        D -->|"completion via SNS"| E["Lambda<br/>collect results"]
+    end
+
+    E --> F["Amazon Comprehend<br/>entities · classify · PII redaction"]
+    F --> G[("Structured store<br/>DynamoDB / S3 + Glue catalog")]
+    G --> H["Athena SQL · QuickSight · R / Python"]
+
+    B -.->|"lifecycle policy"| I[("S3 Glacier Deep Archive<br/>raw originals, long-term")]
+```
+
+1. **Ingest into Amazon S3.** Land everything in an S3 bucket that acts as the
+   raw data lake. For paper not yet digitized, scan to PDF first; for a large
+   existing local archive (potentially terabytes of scans), ship it in with
+   **AWS Snowball** or copy over the network with **AWS DataSync** rather than
+   slow per-file uploads. Organize by a key prefix scheme (e.g.
+   `raw/{year}/{case-id}.pdf`).
+2. **Tame the storage burden with S3 storage classes + lifecycle.** Scanned
+   images are big; extracted text is tiny. Keep originals in **S3 Standard**
+   only while processing, then a **lifecycle policy** transitions the raw scans
+   to **S3 Glacier Flexible Retrieval / Deep Archive** for cheap long-term
+   retention (you rarely re-OCR the same page). **S3 Intelligent-Tiering** is the
+   fire-and-forget alternative if access patterns are unpredictable. The small
+   extracted-text/JSON outputs stay in S3 Standard for analysis.
+3. **OCR + data extraction with Amazon Textract.** Because filings are multi-page
+   PDFs, use Textract's **asynchronous** API (`StartDocumentAnalysis`) which
+   reads multi-page documents directly from S3 and returns not just text but
+   **tables and form key-value pairs** — important for bankruptcy schedules of
+   assets, liabilities, and creditors — including handwriting on older scans. See
+   [Amazon Textract](#amazon-textract).
+4. **Orchestrate the pipeline.** An **S3 upload event** triggers a **Lambda**
+   function that starts the Textract async job; Textract signals completion via
+   **SNS**, and a second Lambda collects the result. For a decades-long backfill,
+   wrap this in **AWS Step Functions** to manage batching, retries, and Textract
+   service limits across thousands of documents reliably.
+5. **Analyze the text with Amazon Comprehend.** Run extracted text through
+   Comprehend for **entity recognition** (debtors, creditors, courts, dollar
+   amounts, dates), **custom classification** (e.g. Chapter 7 / 11 / 13), and
+   **PII detection/redaction** to anonymize personal data for IRB compliance
+   before analysis. Custom entity recognition can be trained for
+   bankruptcy-specific terms. See [Amazon Comprehend](#amazon-comprehend) and its
+   [research use cases](#amazon-comprehend).
+6. **Store and query the structured output.** Write the extracted fields to a
+   structured store — **DynamoDB** for lookups, or Parquet files in S3 cataloged
+   by the **AWS Glue Data Catalog** and queried with **Amazon Athena** (SQL,
+   pay-per-query). Govern shared access with **AWS Lake Formation** if a research
+   team needs fine-grained, column-level permissions. See
+   [AWS Lake Formation](#aws-lake-formation).
+7. **Explore.** Query with Athena, visualize in **QuickSight**, or export the
+   clean dataset from S3 into the researcher's stats tooling (R / Python).
+
+**Why these services** — the pipeline is **serverless and event-driven**, so it
+scales from a handful of documents to the full decades-long corpus without
+managing servers, and you pay per document/query rather than for idle capacity.
+Textract is purpose-built for *documents/forms/tables* (not scene text — that's
+Rekognition), and Comprehend supplies the *understanding* layer on top of the
+*extraction*. The S3 lifecycle design is what actually solves the
+"storage burden": expensive raw images age into archival tiers automatically
+while the analytically useful text stays cheap and hot.
+
+**Cost & storage notes** — Archive originals in **Glacier Deep Archive** for the
+lowest long-term cost (retrieval is slow but rarely needed once OCR'd). Textract
+and Comprehend bill **per page / per unit of text**, so run each document **once**
+and persist the results — never re-OCR on demand. Keep only the compact
+extracted data in hot storage.
+
+**Resources:**
+
+- [Textract — asynchronous processing of multi-page documents](https://docs.aws.amazon.com/textract/latest/dg/async.html)
+- [S3 lifecycle and storage classes](https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lifecycle-mgmt.html)
+- [Guidance: intelligent document processing on AWS](https://aws.amazon.com/solutions/guidance/intelligent-document-processing-on-aws/)
+- [Migrating large datasets with AWS Snowball](https://docs.aws.amazon.com/snowball/latest/developer-guide/whatissnowball.html)
