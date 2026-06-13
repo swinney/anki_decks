@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Guidance for Claude when working in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## What this repo is
 
@@ -39,6 +39,24 @@ python3 build_deck_v2.py   # writes ../AWS_Services.apkg
 `build_deck_v2.py` imports service data from `build_deck.py` and the exam
 fields from `exam_fields.py`. The latest `.apkg` lives at the deck root; prior
 versions are kept in `deck_versions/`.
+
+## How a card is assembled (AWS deck)
+
+A single service's data is spread across three structures, joined by the
+**service name as the key**:
+
+- `build_deck.py` → `SERVICES` (list of `(name, category, description, assoc)`
+  tuples), `URL` (name → AWS homepage), and `assoc_html()` (renders the
+  associated-services links).
+- `exam_fields.py` → `EXAM` (name → `(pick_when, dont_confuse_with,
+  resilience_scope)`).
+- `build_deck_v2.py` joins them: for each `SERVICES` entry it looks up `URL` and
+  `EXAM` by name and emits an 8-field note.
+
+**Adding/editing a service means touching all three keyed by the same exact
+name.** `build_deck_v2.py` validates this up front — it raises `SystemExit` if
+any service is missing a `URL` or `EXAM` entry — so a build failure usually
+means a name mismatch or a forgotten entry, not a code bug.
 
 ## Conventions
 
