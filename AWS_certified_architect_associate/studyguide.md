@@ -45,6 +45,7 @@ up in real architecture decisions.
   - [AWS X-Ray](#aws-x-ray)
 - [Machine Learning & AI](#machine-learning--ai)
   - [Amazon Textract](#amazon-textract)
+  - [Amazon Comprehend](#amazon-comprehend)
 - [Security, Identity & Compliance](#security-identity--compliance)
   - [AWS Security Hub](#aws-security-hub)
   - [AWS CloudHSM](#aws-cloudhsm)
@@ -588,6 +589,79 @@ downstream database.
 - [Amazon Textract — product page](https://aws.amazon.com/textract/)
 - [What is Amazon Textract? (Developer Guide)](https://docs.aws.amazon.com/textract/latest/dg/what-is.html)
 - [Textract — analyzing documents (forms, tables, queries)](https://docs.aws.amazon.com/textract/latest/dg/how-it-works-analyzing.html)
+
+### Amazon Comprehend
+
+**Concept** — Comprehend is a managed **NLP** service that uses machine learning
+to find meaning and relationships in text — with no model building required. Out
+of the box it does **sentiment analysis**, **entity recognition** (people,
+organizations, places, dates), **key-phrase extraction**, **language
+detection**, **syntax analysis**, **topic modeling** across a document
+collection, and **PII detection/redaction**. You can also train **custom
+classification** and **custom entity recognition** on your own labels, and
+**Comprehend Medical** handles clinical text. Everything is exposed through batch
+or real-time APIs.
+
+**Why it matters** — It turns unstructured text into structured signals **at
+scale** without training your own models, and it's the natural *analysis* stage
+after Textract has *extracted* text from documents. Classify documents, redact
+sensitive data, mine sentiment from feedback, or organize a large corpus by
+theme — all via API calls.
+
+**Exam angle — don't confuse with:**
+
+- **vs Amazon Textract** — these **chain**, they don't compete. Textract
+  *extracts* the raw text; Comprehend *analyzes its meaning*. Extraction →
+  Textract; understanding → Comprehend (see [Amazon Textract](#amazon-textract)).
+- **vs Amazon Translate** — Translate converts text from one language to another;
+  Comprehend *understands* text. Translate vs understand.
+- **vs Amazon SageMaker** — Comprehend is a **ready-made NLP API**; SageMaker is
+  for **building and training your own** custom models. Ready API vs
+  build-your-own. Keyword cues: *"sentiment / entities / key phrases / PII in
+  text, no ML expertise"* → Comprehend; *"train a bespoke model"* → SageMaker.
+
+**Research use cases — Harvard Business School**
+
+Comprehend is well suited to large-corpus, text-as-data management research.
+Common patterns:
+
+- **Managerial-communication studies** — run **sentiment and tone analysis** over
+  earnings-call transcripts, shareholder letters, and press releases to relate
+  disclosure tone to market reactions.
+- **Firm/entity datasets** — use **entity recognition** across news, 10-K
+  filings, and interviews to build structured panels linking firms, executives,
+  products, and locations.
+- **Theme discovery at scale** — apply **topic modeling** to 10-K risk-factor
+  sections or interview transcripts to surface themes and track how they evolve
+  over time.
+- **Qualitative coding** — extract **key phrases** from open-ended survey
+  responses and interview transcripts to support mixed-methods coding of
+  large qualitative datasets.
+- **Human-subjects compliance** — use **PII detection/redaction** to anonymize
+  interview and survey data for IRB (Institutional Review Board) approval before
+  analysis or data sharing.
+- **Custom classification** — categorize documents (e.g., types of corporate
+  disclosure, news framing) using researcher-defined labels.
+- **Pipelines & extensions** — pair with **Textract** to digitize scanned
+  archival filings before analysis, **Translate** for multilingual
+  international-business corpora, and **Comprehend Medical** to de-identify PHI
+  (Protected Health Information) in health-policy/management research.
+
+**Scenario — design:** A team ingests customer-support tickets and wants
+sentiment, dominant topics, and PII redaction before storing them for analysis.
+→ S3 → **Lambda** → **Comprehend** (sentiment + topic modeling + PII redaction),
+writing structured results to a database — no models to train or host.
+
+**Scenario — lift & shift:** You migrate an on-prem text-analytics pipeline built
+on hand-rolled NLP libraries. → Replace it with **Comprehend** managed APIs, and
+recreate any bespoke categories with **custom classification** trained on your
+existing labeled data.
+
+**Resources:**
+
+- [Amazon Comprehend — product page](https://aws.amazon.com/comprehend/)
+- [What is Amazon Comprehend? (Developer Guide)](https://docs.aws.amazon.com/comprehend/latest/dg/what-is.html)
+- [Comprehend custom classification](https://docs.aws.amazon.com/comprehend/latest/dg/how-document-classification.html)
 
 ## Security, Identity & Compliance
 
