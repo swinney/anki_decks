@@ -33,8 +33,11 @@ up in real architecture decisions.
 - [Networking & Content Delivery](#networking--content-delivery)
   - [Anycast IPs & AWS Global Accelerator](#anycast-ips--aws-global-accelerator)
   - [BGP — Border Gateway Protocol](#bgp--border-gateway-protocol)
+  - [AWS Cloud Map](#aws-cloud-map)
 - [Analytics](#analytics)
   - [Amazon Data Firehose](#amazon-data-firehose)
+- [Management & Governance](#management--governance)
+  - [AWS Control Tower](#aws-control-tower)
 
 ---
 
@@ -166,6 +169,60 @@ preserving the redundancy model you already operate.
 - [Direct Connect — routing policies and BGP communities](https://docs.aws.amazon.com/directconnect/latest/UserGuide/routing-and-bgp.html)
 - [Site-to-Site VPN — routing options (static vs BGP)](https://docs.aws.amazon.com/vpn/latest/s2svpn/VPNRoutingTypes.html)
 
+### AWS Cloud Map
+
+**Concept** — Cloud Map is a **service-discovery registry** for your
+application's resources. You register components — microservices, databases,
+queues, or any resource — under friendly logical names, and your application
+**resolves them by name to get their current location** as they change
+dynamically (scaling events, redeploys, failovers). It supports two discovery
+methods: **DNS-based** (Cloud Map creates and manages the Route 53 records for
+you) and **API-based** (Application Programming Interface) via the
+`DiscoverInstances` call, which can return **health-aware** results and works
+for **non-IP resources** (e.g., a queue URL or table name) with custom
+attributes attached.
+
+**Why it matters** — In dynamic microservice architectures, endpoints change
+constantly, so hardcoding IPs or URLs breaks. Cloud Map is the single
+source of truth for "what's running where, right now," letting services find
+each other by logical name and automatically filtering out unhealthy instances.
+**ECS Service Discovery is built on Cloud Map** — registering and deregistering
+tasks for you as they start and stop.
+
+**Exam angle — don't confuse with:**
+
+- **vs Route 53** — the key distinction. Route 53 is **DNS**: it resolves names
+  to IPs for internet/VPC routing. Cloud Map is an **application-level service
+  registry** — it can track **non-IP** resources and arbitrary attributes, is
+  queryable via API with health filtering, and uses Route 53 under the hood only
+  for its DNS-based mode. Keyword cues: *"service discovery for microservices /
+  register resources and resolve by name / dynamic endpoints"* → Cloud Map;
+  *"domain names / hosted zones / DNS routing policies"* → Route 53.
+- **vs App Mesh** — App Mesh is the **service mesh** (traffic routing,
+  retries, observability via Envoy proxies); Cloud Map is the **discovery**
+  layer it can pull endpoints from. Mesh = how traffic flows; Cloud Map = where
+  things are.
+- **vs ELB** — a load balancer *distributes* traffic across registered targets;
+  Cloud Map *names and discovers* resources. They solve different problems.
+
+**Scenario — design:** You're building microservices on **ECS** that scale up
+and down continuously and need to call each other without hardcoded addresses.
+→ Enable **ECS Service Discovery** (backed by **Cloud Map**): each service
+registers under a name, callers resolve the current healthy endpoints by name,
+and deregistration is automatic as tasks cycle.
+
+**Scenario — lift & shift:** You migrate an app that relied on a self-managed
+service registry (e.g., Consul or Eureka) or hardcoded host lists. → Register
+the components in **Cloud Map** and resolve them by name via DNS or the
+`DiscoverInstances` API, retiring the self-operated registry while keeping the
+discover-by-name pattern the app already expects.
+
+**Resources:**
+
+- [AWS Cloud Map — product page](https://aws.amazon.com/cloud-map/)
+- [What is AWS Cloud Map? (Developer Guide)](https://docs.aws.amazon.com/cloud-map/latest/dg/what-is-cloud-map.html)
+- [ECS service discovery with Cloud Map](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-discovery.html)
+
 ## Analytics
 
 ### Amazon Data Firehose
@@ -216,3 +273,60 @@ self-managed forwarders/buffering layer with a managed stream you don't operate.
 - [Amazon Data Firehose — product page](https://aws.amazon.com/firehose/)
 - [Amazon Data Firehose — Developer Guide](https://docs.aws.amazon.com/firehose/latest/dev/what-is-this-service.html)
 - [Kinesis Data Streams vs Data Firehose (FAQ)](https://aws.amazon.com/kinesis/data-firehose/faqs/)
+
+## Management & Governance
+
+### AWS Control Tower
+
+**Concept** — Control Tower is the **automated way to set up and govern a secure,
+multi-account AWS environment** — a *landing zone* — based on AWS best practices,
+in a few clicks instead of weeks of manual wiring. It doesn't replace the
+underlying services; it **orchestrates** them: AWS Organizations (account
+structure, Organizational Units (OUs), and Service Control Policies (SCPs)), AWS
+Config (records and evaluates resource configuration), CloudFormation/Service
+Catalog (Account Factory, which vends standardized new accounts), and IAM
+Identity Center (workforce single sign-on (SSO)). It bootstraps a dedicated
+**log archive** and **audit** account, applies **guardrails**, and gives you a
+dashboard over the whole org.
+
+**Why it matters** — Building a compliant multi-account foundation by hand —
+org structure, centralized logging, an audit account, SSO, and a consistent set
+of policies — is slow and error-prone. Control Tower automates that initial
+landing zone *and* keeps governing it. Its **guardrails** come in two kinds:
+**preventive** (SCPs that *stop* disallowed actions) and **detective** (Config
+rules that *flag* drift after the fact). **Account Factory** then makes every
+new account come out pre-configured and compliant.
+
+**Exam angle — don't confuse with:**
+
+- **vs AWS Organizations** — the key distinction. Organizations is the
+  *structure*: accounts, OUs, consolidated billing, and raw SCPs. Control Tower
+  is *automated governance on top of* Organizations. Keyword cues: *"quickly
+  set up a governed multi-account landing zone with guardrails"* → Control
+  Tower; *"just need an account hierarchy / consolidated billing / apply an
+  SCP"* → Organizations.
+- **vs AWS Config** — Config is the engine for **detective** guardrails (it
+  records and evaluates resource state); Control Tower *consumes* Config. Config
+  alone isn't multi-account setup or preventive policy.
+- **vs Service Catalog** — Control Tower's **Account Factory** is built on
+  Service Catalog to provision standardized accounts; Service Catalog by itself
+  is approved-product templates, not landing-zone governance.
+
+**Scenario — design:** A company is starting fresh on AWS and wants a
+multi-account foundation from day one — separate prod/dev/sandbox OUs,
+centralized logging and audit accounts, SSO, and guardrails that stop risky
+actions. → **Control Tower**: stand up the landing zone, use **Account Factory**
+to vend each new account pre-governed, and enable preventive + detective
+guardrails. Plain Organizations would mean wiring all of that by hand.
+
+**Scenario — lift & shift:** An organization already has a dozen accounts in AWS
+Organizations created ad hoc, and wants to bring them under consistent
+governance without rebuilding. → Adopt **Control Tower** and **enroll** the
+existing OUs/accounts into the landing zone, applying guardrails to accounts
+that were previously ungoverned (subject to Control Tower's prerequisites).
+
+**Resources:**
+
+- [AWS Control Tower — product page](https://aws.amazon.com/controltower/)
+- [What is AWS Control Tower? (User Guide)](https://docs.aws.amazon.com/controltower/latest/userguide/what-is-control-tower.html)
+- [Control Tower controls (guardrails) reference](https://docs.aws.amazon.com/controltower/latest/controlreference/controls.html)
