@@ -27,8 +27,11 @@ associated services.
 
 ## Environment setup
 
+The shared conda env is defined at the repo root (`~/Projects/anki_decks/environment.yml`):
+
 ```bash
-conda env create -f environment.yml
+cd ~/Projects/anki_decks
+conda env create -f environment.yml   # first time only
 conda activate anki_decks
 ```
 
