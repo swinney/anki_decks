@@ -42,7 +42,7 @@ versions are kept in `deck_versions/`.
 
 ## How a card is assembled (AWS deck)
 
-A single service's data is spread across three structures, joined by the
+A single service's data is spread across four structures, joined by the
 **service name as the key**:
 
 - `build_deck.py` → `SERVICES` (list of `(name, category, description, assoc)`
@@ -50,13 +50,14 @@ A single service's data is spread across three structures, joined by the
   associated-services links).
 - `exam_fields.py` → `EXAM` (name → `(pick_when, dont_confuse_with,
   resilience_scope)`).
-- `build_deck_v2.py` joins them: for each `SERVICES` entry it looks up `URL` and
-  `EXAM` by name and emits an 8-field note.
+- `best_practices.py` → `BEST_PRACTICES` (name → AWS best-practices URL).
+- `build_deck_v2.py` joins them: for each `SERVICES` entry it looks up `URL`,
+  `EXAM`, and `BEST_PRACTICES` by name and emits a 9-field note.
 
-**Adding/editing a service means touching all three keyed by the same exact
+**Adding/editing a service means touching all four keyed by the same exact
 name.** `build_deck_v2.py` validates this up front — it raises `SystemExit` if
-any service is missing a `URL` or `EXAM` entry — so a build failure usually
-means a name mismatch or a forgotten entry, not a code bug.
+any service is missing a `URL`, `EXAM`, or `BEST_PRACTICES` entry — so a build
+failure usually means a name mismatch or a forgotten entry, not a code bug.
 
 ## Conventions
 

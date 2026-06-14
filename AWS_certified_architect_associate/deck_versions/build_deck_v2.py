@@ -8,6 +8,7 @@ import genanki
 
 from build_deck import SERVICES, URL, assoc_html
 from exam_fields import EXAM
+from best_practices import BEST_PRACTICES
 
 
 def esc(s):
@@ -21,8 +22,8 @@ def stable_guid(name):
 
 
 model = genanki.Model(
-    1607392320,  # new model id (note type changed: 8 fields)
-    "AWS Service Card v2",
+    1607392321,  # new model id (note type changed: 9 fields, added BestPractices)
+    "AWS Service Card v3",
     fields=[
         {"name": "Service"},
         {"name": "Category"},
@@ -32,6 +33,7 @@ model = genanki.Model(
         {"name": "Pick"},
         {"name": "Confuse"},
         {"name": "Scope"},
+        {"name": "BestPractices"},
     ],
     templates=[{
         "name": "Card 1",
@@ -44,7 +46,9 @@ model = genanki.Model(
 <div class="row confuse"><span class="lab">Don&#39;t confuse with</span>{{Confuse}}</div>
 <div class="row scope"><span class="lab">Resilience scope</span>{{Scope}}</div>
 <div class="assoc-label">Often associated with</div>
-<div class="assoc">{{Associated}}</div>''',
+<div class="assoc">{{Associated}}</div>
+{{#BestPractices}}<div class="bp-label">Best practices</div>
+<div class="bp"><a href="{{BestPractices}}">View AWS best practices <span class="ext">&#8599;</span></a></div>{{/BestPractices}}''',
     }],
     css='''.card { font-family: -apple-system, Helvetica, Arial, sans-serif; font-size: 17px; text-align: center; color: #232f3e; background: #fff; padding: 16px; }
 .svc { font-size: 28px; font-weight: 700; }
@@ -62,6 +66,10 @@ model = genanki.Model(
 .assoc { font-size: 15px; line-height: 1.7; margin-top: 4px; }
 .assoc a { color: #0073bb; text-decoration: none; }
 .assoc a:hover { text-decoration: underline; }
+.bp-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #687078; margin-top: 16px; }
+.bp { font-size: 15px; line-height: 1.7; margin-top: 4px; }
+.bp a { color: #0073bb; text-decoration: none; }
+.bp a:hover { text-decoration: underline; }
 hr#answer { border: none; border-top: 1px solid #d5dbdb; margin: 14px 0; }''',
 )
 
@@ -69,10 +77,13 @@ deck = genanki.Deck(2059400110, "AWS Solutions Architect — Services")
 
 missing_url = [n for n, *_ in SERVICES if n not in URL]
 missing_exam = [n for n, *_ in SERVICES if n not in EXAM]
+missing_bp = [n for n, *_ in SERVICES if n not in BEST_PRACTICES]
 if missing_url:
     raise SystemExit(f"Missing URL: {missing_url}")
 if missing_exam:
     raise SystemExit(f"Missing exam fields: {missing_exam}")
+if missing_bp:
+    raise SystemExit(f"Missing best-practices URL: {missing_bp}")
 
 for name, cat, desc, assoc in SERVICES:
     pick, confuse, scope = EXAM[name]
@@ -81,7 +92,7 @@ for name, cat, desc, assoc in SERVICES:
         guid=stable_guid(name),
         fields=[
             name, cat, desc, assoc_html(assoc), URL[name],
-            esc(pick), esc(confuse), esc(scope),
+            esc(pick), esc(confuse), esc(scope), BEST_PRACTICES[name],
         ],
     )
     deck.add_note(note)

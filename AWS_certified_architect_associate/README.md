@@ -12,6 +12,7 @@ associated services.
 - **Don't confuse with** (orange) – the close-pair contrast the exam tests.
 - **Resilience scope** (blue) – AZ / Regional / Global reach and Multi-AZ support.
 - **Often associated with** – related services, each linked to its AWS page.
+- **Best practices** – link to the AWS best-practices page for the service.
 
 ## Files
 
@@ -20,10 +21,12 @@ associated services.
 | `AWS_Services.apkg` | Current deck — import this into Anki. |
 | `deck_versions/build_deck.py` | Base data module: service list, descriptions, URLs, associations. |
 | `deck_versions/exam_fields.py` | The three SAA-C03 fields per service. |
-| `deck_versions/build_deck_v2.py` | Builds the current deck from the two modules above. |
+| `deck_versions/best_practices.py` | Best-practices URL per service. |
+| `deck_versions/build_deck_v2.py` | Builds the current deck from the three modules above. |
 | `deck_versions/build_deck_v1.py` | First version's build script (links only, no exam fields). |
 | `deck_versions/AWS_Services_v1.apkg` | v1 snapshot (no exam fields). |
-| `deck_versions/AWS_Services_v2.apkg` | v2 snapshot (current). |
+| `deck_versions/AWS_Services_v2.apkg` | v2 snapshot (exam fields, 8-field note). |
+| `deck_versions/AWS_Services_v3.apkg` | v3 snapshot (current; adds Best practices, 9-field note). |
 
 ## Environment setup
 
