@@ -589,7 +589,8 @@ inside the guardrails.
 **Scenario — lift & shift:** HBS has accumulated dozens of ad-hoc AWS accounts
 that individual faculty opened over the years. You **invite** them into a single
 AWS Organization, sort them into OUs by department, and apply baseline SCPs
-(block leaving the org, restrict Regions, require IMDSv2) — bringing previously
+(block leaving the org, restrict Regions, require IMDSv2 (Instance Metadata
+Service v2)) — bringing previously
 ungoverned accounts under one consistent policy and consolidating billing,
 without rebuilding any of them.
 
@@ -605,10 +606,9 @@ without rebuilding any of them.
 multi-account AWS environment** — a *landing zone* — based on AWS best practices,
 in a few clicks instead of weeks of manual wiring. It doesn't replace the
 underlying services; it **orchestrates** them: AWS Organizations (account
-structure, Organizational Units (OUs), and Service Control Policies (SCPs)), AWS
-Config (records and evaluates resource configuration), CloudFormation/Service
-Catalog (Account Factory, which vends standardized new accounts), and IAM
-(Identity and Access Management) Identity Center (workforce single sign-on
+structure, OUs, and SCPs), AWS Config (records and evaluates resource
+configuration), CloudFormation/Service Catalog (Account Factory, which vends
+standardized new accounts), and IAM Identity Center (workforce single sign-on
 (SSO)). It bootstraps a dedicated **log archive** and **audit** account, applies **guardrails**, and gives you a dashboard over the whole org.
 
 **Why it matters** — Building a compliant multi-account foundation by hand —
