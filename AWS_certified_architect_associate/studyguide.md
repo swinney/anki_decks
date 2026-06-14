@@ -39,6 +39,7 @@ up in real architecture decisions.
 - [[#Analytics|Analytics]]
   - [[#Amazon Data Firehose|Amazon Data Firehose]]
   - [[#AWS Lake Formation|AWS Lake Formation]]
+  - [[#Data Lake vs Data Mesh|Data Lake vs Data Mesh]]
 - [[#Management & Governance|Management & Governance]]
   - [[#AWS Organizations & Service Control Policies (SCPs)|AWS Organizations & Service Control Policies (SCPs)]]
   - [[#AWS Control Tower|AWS Control Tower]]
@@ -467,6 +468,73 @@ catalog, replacing scattered S3/IAM rules with one consistent governance layer.
 - [AWS Lake Formation — product page](https://aws.amazon.com/lake-formation/)
 - [What is AWS Lake Formation? (Developer Guide)](https://docs.aws.amazon.com/lake-formation/latest/dg/what-is-lake-formation.html)
 - [Lake Formation fine-grained access control](https://docs.aws.amazon.com/lake-formation/latest/dg/access-control-fine-grained.html)
+
+### Data Lake vs Data Mesh
+
+**Concept** — A **data lake** is *centralized storage*: one repository (on S3)
+that every team pipes raw and curated data into, typically owned and operated by a
+single central data team. A **data mesh** is a *decentralized operating model*
+(coined by Zhamak Dehghani, ~2019) that reacts to the bottleneck of that central
+team. Instead of one team owning all data, ownership is **distributed to the
+domains** that understand the data best, and they publish it for others to
+consume. A mesh is usually **built on top of** lakes — it is the ownership and
+governance model layered over the storage, not a different storage technology.
+
+A data mesh rests on four principles:
+
+- **Domain-oriented ownership** — the team closest to the data owns it end to end,
+  rather than handing raw data to a central team that lacks the context.
+- **Data as a product** — each domain's published data is discoverable,
+  documented, trustworthy, and genuinely usable by others, with an owner and
+  quality guarantees.
+- **Self-serve data platform** — a central platform team provides the tooling
+  (storage, catalog, access control, pipelines) so domains can publish/consume
+  without rebuilding plumbing. The platform *enables*; it doesn't own the data.
+- **Federated computational governance** — global rules (security, privacy,
+  interoperability) are defined centrally but enforced **automatically** across
+  every domain, so you get consistency without a central gatekeeper.
+
+**Why it matters** — As an organization scales, a single central data team
+becomes a chokepoint: every new dataset or access request queues behind them, and
+they rarely understand each domain's data deeply. A mesh removes that chokepoint
+by pushing ownership outward while keeping governance consistent — the right model
+when many independent groups each generate valuable data.
+
+**Exam angle — don't confuse with:**
+
+- **Lake vs mesh** — a **data lake** = centralized *storage* owned by one team; a
+  **data mesh** = decentralized *operating model* where many domains each own and
+  publish their data as products. The mesh is an architecture/ownership pattern,
+  not a service you click to create.
+- **It's a pattern, not a product** — AWS has no service literally called "data
+  mesh." You *assemble* one from existing services (see below). On the SAA-C03
+  exam, know the concept and the contrast with a centralized lake; it is not a
+  heavily tested service.
+- **Enabling service** — **AWS Lake Formation**'s cross-account, fine-grained
+  sharing is the piece that most directly enables a mesh: domains in separate
+  accounts share specific tables/columns without copying data.
+
+**Scenario — design:** HBS's ~300 researchers span many departments, each
+generating valuable study data, and a single central data office can't keep up
+with every request. → Adopt a **data mesh**: each department owns an AWS account
+under **Organizations**, stores data in its own **S3** buckets, and publishes
+governed "data products" via the **Glue** catalog and **Lake Formation**
+cross-account grants. **SCPs** enforce the federated guardrails (Region, encryption,
+logging) everywhere, so each domain self-serves while the data team keeps one
+consistent privacy baseline.
+
+**Scenario — lift & shift:** HBS currently funnels everything into one central
+data lake that a small team struggles to govern and keep current. → Re-org toward
+a mesh: hand each domain ownership of its slice of the lake, expose it through the
+shared Glue catalog with **Lake Formation** fine-grained permissions, and let the
+central team run the **self-serve platform** rather than every pipeline — relieving
+the bottleneck without re-platforming the storage.
+
+**Resources:**
+
+- [AWS Lake Formation — product page](https://aws.amazon.com/lake-formation/) (the key enabler)
+- [Design a data mesh architecture using AWS Lake Formation (AWS Big Data Blog)](https://aws.amazon.com/blogs/big-data/design-a-data-mesh-architecture-using-aws-lake-formation-and-aws-glue/)
+- [What is a data mesh? (AWS)](https://aws.amazon.com/what-is/data-mesh/)
 
 ## Management & Governance
 
