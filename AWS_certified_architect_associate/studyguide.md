@@ -40,6 +40,7 @@ up in real architecture decisions.
   - [[#Amazon Data Firehose|Amazon Data Firehose]]
   - [[#AWS Lake Formation|AWS Lake Formation]]
 - [[#Management & Governance|Management & Governance]]
+  - [[#AWS Organizations & Service Control Policies (SCPs)|AWS Organizations & Service Control Policies (SCPs)]]
   - [[#AWS Control Tower|AWS Control Tower]]
 - [[#Developer Tools|Developer Tools]]
   - [[#AWS X-Ray|AWS X-Ray]]
@@ -469,6 +470,67 @@ catalog, replacing scattered S3/IAM rules with one consistent governance layer.
 
 ## Management & Governance
 
+### AWS Organizations & Service Control Policies (SCPs)
+
+**Concept** — **AWS Organizations** lets you centrally manage many AWS accounts
+as one **organization**: a top-level **root**, nested **Organizational Units
+(OUs)** that group accounts, and member accounts — with **consolidated billing**
+across all of them. A **Service Control Policy (SCP)** is an Organizations policy
+that sets the **maximum available permissions** (a permission *ceiling* or
+guardrail) for the accounts it's attached to. The critical mental model: an **SCP
+never *grants* anything** — IAM (Identity and Access Management) inside each
+account still grants permissions, and the *effective* permission is the
+**intersection** of what the SCP allows and what IAM allows. If the SCP denies an
+action, no one in that account can perform it — **not even the account's root
+user or an administrator**.
+
+**Why it matters** — SCPs are the **preventive** guardrail for a multi-account
+estate: one policy at an OU enforces rules on every account beneath it, no matter
+what individual account admins do. Typical uses: restrict resources to approved
+Regions (data residency), block disabling CloudTrail/Config logging, require
+encryption, or prevent an account from leaving the organization. This is how you
+hold a consistent security baseline across hundreds of accounts without trusting
+every local admin to configure IAM correctly.
+
+**Exam angle — don't confuse with:**
+
+- **vs IAM policies** — IAM *grants* permissions; an SCP only *caps* them.
+  Effective access = SCP ∩ IAM. An SCP attached to an account with no IAM grants
+  still gives access to nothing.
+- **vs IAM permissions boundaries** — a permissions boundary limits a **single
+  IAM principal** (one user/role); an SCP limits an **entire account or OU**.
+- **vs AWS Control Tower** — Organizations + SCPs are the raw *structure and
+  preventive policy*; Control Tower *automates* applying them as guardrails. Cue:
+  *"just need an account hierarchy / consolidated billing / apply an SCP"* →
+  Organizations; *"governed landing zone with guardrails in a few clicks"* →
+  Control Tower.
+- **Two gotchas the exam loves:** SCPs require Organizations with **all features
+  enabled** (not just consolidated billing), and **SCPs never restrict the
+  management (payer) account** — so you can't accidentally lock yourself out at
+  the top.
+
+**Scenario — design:** HBS stands up a multi-account organization with an OU per
+school/department and a **Research** OU holding one account per research group.
+You attach an SCP to the Research OU that **denies any action outside
+`us-east-1`** (data-residency for human-subjects data), **denies disabling
+CloudTrail or Config**, and **denies creating unencrypted S3/EBS**. Now even a
+researcher who is admin in their own account can't weaken those controls — one
+policy governs all ~300 researchers' accounts, while each group still self-serves
+inside the guardrails.
+
+**Scenario — lift & shift:** HBS has accumulated dozens of ad-hoc AWS accounts
+that individual faculty opened over the years. You **invite** them into a single
+AWS Organization, sort them into OUs by department, and apply baseline SCPs
+(block leaving the org, restrict Regions, require IMDSv2) — bringing previously
+ungoverned accounts under one consistent policy and consolidating billing,
+without rebuilding any of them.
+
+**Resources:**
+
+- [AWS Organizations — product page](https://aws.amazon.com/organizations/)
+- [Service Control Policies (SCPs) — User Guide](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html)
+- [How SCPs work / policy evaluation](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps_evaluation.html)
+
 ### AWS Control Tower
 
 **Concept** — Control Tower is the **automated way to set up and govern a secure,
@@ -479,9 +541,7 @@ structure, Organizational Units (OUs), and Service Control Policies (SCPs)), AWS
 Config (records and evaluates resource configuration), CloudFormation/Service
 Catalog (Account Factory, which vends standardized new accounts), and IAM
 (Identity and Access Management) Identity Center (workforce single sign-on
-(SSO)). It bootstraps a dedicated
-**log archive** and **audit** account, applies **guardrails**, and gives you a
-dashboard over the whole org.
+(SSO)). It bootstraps a dedicated **log archive** and **audit** account, applies **guardrails**, and gives you a dashboard over the whole org.
 
 **Why it matters** — Building a compliant multi-account foundation by hand —
 org structure, centralized logging, an audit account, SSO, and a consistent set
