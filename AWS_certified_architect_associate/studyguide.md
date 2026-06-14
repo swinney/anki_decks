@@ -925,6 +925,47 @@ AWS handles provisioning and durability.
   and **rotates secrets** (database credentials, API keys); CloudHSM (and KMS)
   manage **encryption keys**. Keys vs secrets.
 
+**Research use cases — Harvard Business School**
+
+CloudHSM matters to research that handles **restricted, contractually protected
+data** — where the data provider or the institution requires that encryption
+keys live in single-tenant, FIPS 140-2 Level 3 hardware under the researcher's
+**sole custody**, not the cloud provider's. Common patterns:
+
+- **Restricted-use datasets** — confidential firm data under an NDA
+  (Non-Disclosure Agreement), proprietary
+  vendor data (e.g., bank-transaction or scanner panels), Census/IRS
+  restricted-access files, or health records often carry a **DUA (Data Use
+  Agreement)** mandating strong encryption with controlled key custody. CloudHSM
+  satisfies clauses that the shared, multi-tenant model can't.
+- **Sole key custody** — when a provider stipulates that *only* the institution
+  may hold the keys, CloudHSM ensures even AWS operators cannot decrypt the data;
+  the keys never leave hardware you control.
+- **Privacy-preserving record linkage** — generate **keyed pseudonyms** for
+  subject identifiers using an **HMAC (Hash-based Message Authentication Code)**
+  key kept inside the HSM, so datasets can be joined on the pseudonym while the
+  re-identification key never leaves the hardware — useful for linking sensitive
+  panels under IRB constraints.
+- **Regulatory mandates** — workloads under **HIPAA (Health Insurance
+  Portability and Accountability Act)** for clinical/health-policy research or
+  **GLBA (Gramm-Leach-Bliley Act)** for financial data, where FIPS 140-2 Level 3
+  key management is the compliance bar.
+- **Integrity & provenance** — digitally **sign** datasets or audit logs with an
+  HSM-held key to prove they weren't altered, supporting journal
+  data-availability and replication requirements.
+- **Multi-institution collaborations** — each party keeps its own keys in its own
+  HSM, enabling governed sharing where no single party (or AWS) can unilaterally
+  decrypt.
+
+```mermaid
+flowchart LR
+    R["Restricted dataset<br/>(NDA / DUA, PII)"] --> P["Pseudonymize / encrypt<br/>(HMAC keyed hash)"]
+    K[["CloudHSM<br/>keys never leave hardware<br/>researcher sole custody"]] -. signs / keys .-> P
+    P --> S[("Amazon S3<br/>de-identified, encrypted")]
+    S --> A["Analysis<br/>Athena / Comprehend / R · Python"]
+    X["AWS operators"] -. cannot decrypt .-x S
+```
+
 **Scenario — design:** A payments platform is contractually required to keep its
 cryptographic keys in customer-controlled, single-tenant, FIPS 140-2 Level 3
 hardware. → **CloudHSM** cluster across AZs for the keys, optionally fronted by a
