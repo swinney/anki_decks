@@ -65,9 +65,13 @@ failure usually means a name mismatch or a forgotten entry, not a code bug.
   service name, so re-importing an updated deck *updates* existing cards in
   Anki instead of creating duplicates — preserving review history. Never switch
   to random GUIDs.
-- **Note type changes need a new model id.** Adding/removing fields means a new
-  `genanki.Model` id (and ideally a new model name). Keep the same id when only
-  content changes.
+- **Keep the model id stable to evolve a deployed note type.** To add/remove a
+  field (or change templates/CSS) *and* update cards people already studied,
+  **keep the same `genanki.Model` id** and add new fields **at the end** — on
+  re-import Anki matches notes by GUID, updates the note type in place, and
+  preserves review history. Using a *new* model id makes Anki **reject** notes
+  whose GUIDs already exist under the old type ("note type has changed"), so only
+  mint a new id for a genuinely separate note type.
 - **Edit data, not the .apkg.** Change `build_deck.py` / `exam_fields.py`, then
   rebuild. The `.apkg` is a generated artifact.
 - **Verify before delivering.** After building, unzip the `.apkg` and check the

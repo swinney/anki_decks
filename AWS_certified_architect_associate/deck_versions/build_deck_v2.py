@@ -22,8 +22,11 @@ def stable_guid(name):
 
 
 model = genanki.Model(
-    1607392321,  # new model id (note type changed: 9 fields, added BestPractices)
-    "AWS Service Card v3",
+    1607392320,  # SAME id as the deployed v2 note type — adding a field (last)
+                 # updates the existing note type in place on re-import and keeps
+                 # review history. A NEW id would make Anki reject notes whose
+                 # GUIDs already exist under the old type ("note type changed").
+    "AWS Service Card v2",
     fields=[
         {"name": "Service"},
         {"name": "Category"},
