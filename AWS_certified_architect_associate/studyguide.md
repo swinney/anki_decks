@@ -40,6 +40,8 @@ up in real architecture decisions.
   - [[#Amazon Data Firehose|Amazon Data Firehose]]
   - [[#AWS Lake Formation|AWS Lake Formation]]
   - [[#Data Lake vs Data Mesh|Data Lake vs Data Mesh]]
+- [[#Application Integration|Application Integration]]
+  - [[#AWS Step Functions & Stepwise Workflow Logic|AWS Step Functions & Stepwise Workflow Logic]]
 - [[#Management & Governance|Management & Governance]]
   - [[#AWS Organizations & Service Control Policies (SCPs)|AWS Organizations & Service Control Policies (SCPs)]]
   - [[#AWS Control Tower|AWS Control Tower]]
@@ -535,6 +537,86 @@ the bottleneck without re-platforming the storage.
 - [AWS Lake Formation — product page](https://aws.amazon.com/lake-formation/) (the key enabler)
 - [Design a data mesh architecture using AWS Lake Formation (AWS Big Data Blog)](https://aws.amazon.com/blogs/big-data/design-a-data-mesh-architecture-using-aws-lake-formation-and-aws-glue/)
 - [What is a data mesh? (AWS)](https://aws.amazon.com/what-is/data-mesh/)
+
+## Application Integration
+
+### AWS Step Functions & Stepwise Workflow Logic
+
+**Concept** — **AWS Step Functions** is a serverless **orchestrator**: you define
+a **state machine** — a workflow expressed as a series of steps ("states") — and
+Step Functions runs it, moving from one step to the next, passing output along,
+handling retries, and tracking exactly where execution is. Workflows are written
+in **Amazon States Language (ASL)**, a JSON-based definition, and visualized as a
+flowchart in the console. The "stepwise logic" is built from a small vocabulary of
+state types:
+
+- **Task** — do one unit of work (invoke a Lambda function, call another AWS
+  service, run an ECS task).
+- **Choice** — branch based on the data (if/else routing).
+- **Parallel** — run several branches at once and wait for all.
+- **Map** — run the same steps over each item in a collection (fan-out), with
+  controllable concurrency.
+- **Wait** — pause for a duration or until a timestamp.
+- **Pass / Succeed / Fail** — inject or transform data, or end the execution.
+
+Each Task can declare **Retry** (back off and try again on specific errors) and
+**Catch** (route failures to a recovery path) — so resilient error handling is
+*configuration*, not hand-written code.
+
+**Why it matters** — Without an orchestrator, multi-step logic gets buried inside
+one giant Lambda function, or smeared across functions that call each other — with
+no central view of state, brittle home-grown retry code, and no easy way to see
+where a run failed. Step Functions externalizes the **control flow**: the workflow
+is declarative and auditable, every step's input/output is recorded, retries and
+timeouts are built in, and it can run for up to a year for long-lived processes.
+You keep business logic in small, single-purpose functions and let Step Functions
+own the sequencing.
+
+**Two flavors:**
+
+- **Standard** — durable, exactly-once, auditable, up to one year. For
+  long-running, business-critical workflows (the default exam answer for
+  orchestration).
+- **Express** — high-volume, short-lived (≤5 minutes), at-least-once, cheaper per
+  run. For high-throughput event processing/streaming.
+
+**Exam angle — don't confuse with:**
+
+- **vs chaining Lambdas directly** — Step Functions *orchestrates*; it doesn't run
+  your business logic. If a question stresses "coordinate multiple steps,"
+  "visual workflow," "built-in retries/error handling," or "long-running" → Step
+  Functions; a single short transformation → just Lambda.
+- **vs Amazon SWF (Simple Workflow Service)** — Step Functions is the newer,
+  serverless, preferred successor; reach for SWF only in rare cases needing
+  external "activity workers" with fine-grained control.
+- **vs EventBridge / SQS / SNS** — those *connect* components (events, queues,
+  pub/sub) but carry no notion of an ordered, stateful multi-step process. Step
+  Functions is for sequenced logic with branching and state; EventBridge routes
+  events, SQS buffers, SNS fans out.
+- **Standard vs Express** — durability/auditability/long-running → Standard;
+  cheap high-volume short bursts → Express.
+
+**Scenario — design:** HBS's research data platform needs a document-intake
+pipeline: when a scanned filing lands in S3, run **Textract**, branch on document
+type (**Choice**), de-identify, run **Comprehend**, then write results to the data
+lake — with automatic retries if a step throttles. → **Step Functions (Standard)**
+orchestrates the whole flow as a visible state machine, with **Retry/Catch** on
+each Task, so the team sees exactly which document failed and where, instead of
+debugging a tangle of chained Lambdas.
+
+**Scenario — lift & shift:** A faculty group has a nightly batch script that
+sequentially cleans, transforms, and loads survey data, with ad-hoc retry logic
+and no visibility when it breaks at 2 a.m. → Re-implement the sequence as a **Step
+Functions** state machine calling small Lambdas per stage; built-in retries,
+timeouts, and execution history replace the brittle script and give operators a
+clear view of failures.
+
+**Resources:**
+
+- [AWS Step Functions — product page](https://aws.amazon.com/step-functions/)
+- [What is Step Functions? (Developer Guide)](https://docs.aws.amazon.com/step-functions/latest/dg/welcome.html)
+- [Standard vs Express workflows](https://docs.aws.amazon.com/step-functions/latest/dg/concepts-standard-vs-express.html)
+- [Amazon States Language spec](https://states-language.net/spec.html)
 
 ## Management & Governance
 
