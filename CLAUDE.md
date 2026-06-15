@@ -15,6 +15,10 @@ Each deck lives in its own subdirectory.
   homepages, associated services, and exam fields (Pick this when / Don't
   confuse with / Resilience scope). Has its own `README.md` and a companion
   `studyguide.md` for deeper topics beyond the deck.
+- `osi_layers_aws/` — OSI Layers for AWS Solutions Architects: 43 cards mapping
+  AWS services to OSI layers (which layer a service operates at and what that
+  enables). Single deck organized by `OSI::L*` and `type::*` tags; 9-field note
+  with an Acronyms field. Has its own `README.md`.
 
 ## Environment
 
