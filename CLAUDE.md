@@ -19,6 +19,11 @@ Each deck lives in its own subdirectory.
   AWS services to OSI layers (which layer a service operates at and what that
   enables). Single deck organized by `OSI::L*` and `type::*` tags; 9-field note
   with an Acronyms field. Has its own `README.md`.
+- `aws_interview_supplement/` — AWS Interview Supplement (HBS stack): 16 cards
+  of cross-cutting/operational depth the recall decks miss (Terraform vs CFN,
+  Security Groups, AMI sharing, IAM eval, KMS envelope encryption, etc.).
+  Tagged `stack::hbs` + `tier::*` + `topic::*`; 8-field note with an Acronyms
+  field. Has its own `README.md`.
 
 ## Environment
 
