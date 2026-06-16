@@ -88,11 +88,28 @@ if missing_exam:
 if missing_bp:
     raise SystemExit(f"Missing best-practices URL: {missing_bp}")
 
+# Services in the HBS interview stack (see the hbs-interview-stack memory).
+# Tagged `stack::hbs` so the user can build an Anki filtered deck
+# (tag:stack::hbs) for focused interview study. Sub-features the user listed
+# (subnets, EIP, AMIs/AMI sharing, security groups) live inside the VPC/EC2
+# cards or the OSI deck, and Terraform has no card here — see README/notes.
+HBS_STACK = {
+    "IAM", "S3", "ACM", "KMS", "Route 53", "CloudWatch", "VPC", "EC2", "ELB",
+    "ECS", "Fargate", "ECR", "Cognito", "DynamoDB", "RDS", "Aurora",
+    "CloudFormation", "Lambda", "Service Catalog", "API Gateway", "GuardDuty",
+    "Shield", "CloudTrail", "SageMaker",
+}
+service_names = {n for n, *_ in SERVICES}
+unknown_hbs = HBS_STACK - service_names
+if unknown_hbs:
+    raise SystemExit(f"HBS_STACK names not found in SERVICES: {sorted(unknown_hbs)}")
+
 for name, cat, desc, assoc in SERVICES:
     pick, confuse, scope = EXAM[name]
     note = genanki.Note(
         model=model,
         guid=stable_guid(name),
+        tags=["stack::hbs"] if name in HBS_STACK else [],
         fields=[
             name, cat, desc, assoc_html(assoc), URL[name],
             esc(pick), esc(confuse), esc(scope), BEST_PRACTICES[name],

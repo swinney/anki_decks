@@ -448,6 +448,19 @@ TYPE_TAG = {
     "Scenario → Service": "type::scenario",
 }
 
+# Cards whose service/concept is in the HBS interview stack (see the
+# hbs-interview-stack memory). Tagged `stack::hbs` so the user can build an Anki
+# filtered deck (tag:stack::hbs) for focused interview study. Excludes services
+# HBS did not list (Direct Connect, Snow, VPN, Transit Gateway, Global
+# Accelerator, CloudFront, WAF-standalone, AppSync, GWLB-standalone).
+HBS_KEYS = {
+    "ov-l3", "ov-l4", "ov-l5", "ov-l6", "ov-l7",
+    "s-vpc", "s-nacl", "s-sg", "s-nlb", "s-shield", "s-stickiness",
+    "s-acm", "s-alb", "s-apigw", "s-route53", "s-cognito",
+    "c-lbs", "c-sg-nacl", "c-waf-shield", "c-igw-nat",
+    "sc-path", "sc-sourceip", "sc-ddos", "sc-deny",
+}
+
 
 def esc(s):
     return html.escape(s)
@@ -523,6 +536,8 @@ def main():
 
     for c in CARDS:
         tags = list(c["layers"]) + [TYPE_TAG[c["type"]]]
+        if c["key"] in HBS_KEYS:
+            tags.append("stack::hbs")
         note = genanki.Note(
             model=model,
             guid=stable_guid(c["key"]),
