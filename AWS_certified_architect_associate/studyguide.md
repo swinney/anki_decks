@@ -36,6 +36,7 @@ up in real architecture decisions.
   - [[#AWS Cloud Map|AWS Cloud Map]]
   - [[#AWS Transit Gateway|AWS Transit Gateway]]
   - [[#AWS App Mesh|AWS App Mesh]]
+  - [[#AWS Direct Connect|AWS Direct Connect]]
 - [[#Analytics|Analytics]]
   - [[#Amazon Data Firehose|Amazon Data Firehose]]
   - [[#AWS Lake Formation|AWS Lake Formation]]
@@ -336,6 +337,116 @@ rewriting them.
 
 - [AWS App Mesh — product page](https://aws.amazon.com/app-mesh/)
 - [What is AWS App Mesh? (User Guide)](https://docs.aws.amazon.com/app-mesh/latest/userguide/what-is-app-mesh.html)
+
+### AWS Direct Connect
+
+**Concept** — AWS Direct Connect (DX) is a **dedicated, private physical link**
+between your on-premises network and AWS that bypasses the public internet for
+consistent bandwidth and latency. Standing one up is a **hybrid process**:
+logical configuration in the AWS Management Console plus physical networking
+coordination with telecom providers or colocation facilities. The standard
+install runs in five steps:
+
+1. **Request the connection** — In the Direct Connect console, pick the DX
+   **location** (a colocation facility such as Equinix or CoreSite) nearest your
+   on-premises infrastructure and the **port speed** (typically 1, 10, or 100
+   Gbps (Gigabits per second); 400 Gbps is also available). AWS reviews the
+   request and provisions a port on its router in that facility — usually within
+   **72 business hours**.
+2. **Download the LOA-CFA** — When the port is ready the console state becomes
+   **"Available"** and AWS issues a **Letter of Authorization and Connecting
+   Facility Assignment (LOA-CFA)**. It specifies the exact rack, panel, and port
+   on the AWS cage and is the legal authorization for the facility to run a cable
+   to AWS equipment. (If AWS instead requests more information, you have 7 days to
+   respond or the connection is deleted.)
+3. **Establish the physical cross-connect** — this bridges the physical gap
+   between your network and AWS:
+   - **Already present in the DX location:** submit the LOA-CFA to facility
+     management; their remote-hands team runs a fiber **cross-connect** from your
+     router to the AWS port named in the document.
+   - **Not in the DX location:** engage an **AWS Direct Connect Delivery
+     Partner** (an ISP (Internet Service Provider) or telecom); hand them the
+     LOA-CFA and they provision a dedicated **last-mile circuit** from your data
+     center to the facility, completing the cross-connect on your behalf.
+4. **Create Virtual Interfaces (VIFs)** — once the link is live you configure
+   logical routing on the port using **802.1Q VLANs (Virtual Local Area
+   Networks)**. Choose the VIF type by routing need:
+   - **Private VIF** — reach an **Amazon Virtual Private Cloud (VPC)** over
+     private IP (Internet Protocol) addresses.
+   - **Public VIF** — reach public AWS services (e.g., Amazon S3, DynamoDB) over
+     the dedicated link instead of the public internet.
+   - **Transit VIF** — connect to an **AWS Transit Gateway**, routing to many
+     VPCs across Regions (see [[#AWS Transit Gateway|AWS Transit Gateway]]).
+5. **Configure the on-premises router (BGP)** — DX requires **Border Gateway
+   Protocol (BGP)** to exchange routes dynamically. Configure your edge router
+   with the **VLAN ID** from VIF creation, assign the point-to-point IP
+   addresses, and establish the **BGP peering session** with the AWS router. Once
+   the session is **"Up"** and routes are propagating, traffic flows over Direct
+   Connect.
+
+```mermaid
+flowchart TD
+    A["1 · Request connection<br/>DX location + port speed"] --> B["AWS provisions port<br/>up to 72 business hours · state: Available"]
+    B --> C["2 · Download LOA-CFA<br/>exact rack / panel / port on AWS cage"]
+    C --> D{"Already in the<br/>DX location?"}
+    D -- Yes --> E["3a · Submit LOA-CFA to facility<br/>remote hands run the cross-connect"]
+    D -- No --> F["3b · Engage DX Delivery Partner<br/>provisions last-mile circuit"]
+    E --> G["Physical link active"]
+    F --> G
+    G --> H["4 · Create VIFs<br/>Private / Public / Transit<br/>on 802.1Q VLANs"]
+    H --> I["5 · Configure on-prem router<br/>VLAN ID · point-to-point IPs · BGP peering"]
+    I --> J["BGP session Up<br/>routes propagate · traffic flows"]
+```
+
+**Why it matters** — Direct Connect delivers **consistent, low-latency, private
+bandwidth** and **lower data-transfer (egress) cost** than the public internet —
+the reason it's chosen for heavy or latency-sensitive hybrid workloads. Two
+planning realities the steps make obvious: there's a real **lead time** (port
+provisioning plus a physical cross-connect), and the link is **not encrypted on
+its own** — it's private, not secure-by-default.
+
+**Exam angle — what gets tested:**
+
+- **Layers 1–2, not encrypted** — DX is a physical/data-link connection. For
+  encryption, run an **IPsec VPN over the Direct Connect** link, or use
+  **MACsec** on supported ports.
+- **LOA-CFA** is the keyword for authorizing the physical **cross-connect**.
+- **VIF types** — Private VIF → one VPC; Public VIF → public AWS services (S3,
+  DynamoDB) over DX; **Transit VIF → Transit Gateway** for many VPCs/Regions.
+- **BGP is required** for dynamic routing over DX (see
+  [[#BGP — Border Gateway Protocol|BGP — Border Gateway Protocol]]).
+- **vs Site-to-Site VPN** — VPN is quick, cheap, encrypted, and runs over the
+  internet (variable performance); DX is dedicated, consistent, and lower-egress
+  but has lead time and no built-in encryption. Common pattern: **DX primary +
+  VPN encrypted backup** (BGP fails over automatically).
+- **Resiliency** — a single connection/location is a single point of failure.
+  The **Direct Connect Resiliency Toolkit** frames the answers: **Maximum
+  resiliency** (connections to *multiple* DX locations, 99.99% SLA) vs **High
+  resiliency** (two single connections to multiple locations, 99.9%). Keyword
+  *"maximum/high resiliency"* → multiple DX locations.
+
+**Scenario — design:** A new analytics platform must pull large datasets from
+on-prem into AWS continuously with predictable throughput and lower egress cost
+than the internet. → Order a **dedicated 10 Gbps Direct Connect** at the nearest
+location; a **Private VIF** to the VPC and a **Transit VIF** to a Transit Gateway
+for multi-VPC reach; run **BGP** for dynamic routing; add a **second connection
+at another DX location** (or a VPN backup) for resiliency.
+
+**Scenario — lift & shift:** You migrate a data center with heavy, ongoing data
+transfer and a hybrid tail. → Because of the **72-business-hour port plus
+cross-connect lead time, order Direct Connect early**. Use a **Public VIF** to
+move bulk data into **S3** over the dedicated link during migration, and
+**Private/Transit VIFs** for steady-state app connectivity; keep your existing
+**BGP** configuration and AS (Autonomous System) number.
+
+**Resources:**
+
+- [AWS Direct Connect — product page](https://aws.amazon.com/directconnect/)
+- [What is AWS Direct Connect? (User Guide)](https://docs.aws.amazon.com/directconnect/latest/UserGuide/Welcome.html)
+- [Dedicated connections & downloading the LOA-CFA](https://docs.aws.amazon.com/directconnect/latest/UserGuide/dedicated_connection.html)
+- [Direct Connect virtual interfaces (VIFs)](https://docs.aws.amazon.com/directconnect/latest/UserGuide/WorkingWithVirtualInterfaces.html)
+- [Routing policies and BGP](https://docs.aws.amazon.com/directconnect/latest/UserGuide/routing-and-bgp.html)
+- [Direct Connect Resiliency Toolkit](https://docs.aws.amazon.com/directconnect/latest/UserGuide/resiliency_toolkit.html)
 
 ## Analytics
 
