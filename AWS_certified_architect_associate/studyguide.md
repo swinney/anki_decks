@@ -88,7 +88,13 @@ IP, different physical endpoint.
 - **DDoS (Distributed Denial of Service) resilience** — an attack is spread across many sites rather than
   concentrated on a single server.
 - **Stable entry point** — you get a fixed IP that "follows" the user
-  geographically.
+  geographically. Clients and downstream services connect to **one static,
+  global IP**, eliminating complex region-specific DNS records.
+
+**Takeaway** — Anycast lets you build globally distributed, highly resilient
+services behind a single static entry point. It's the foundational routing
+mechanism powering major **CDNs (Content Delivery Networks)** and global routing
+services like **AWS Global Accelerator**.
 
 **AWS Global Accelerator** (GA) is AWS's anycast offering: it gives you **two static
 anycast IP addresses** that act as a fixed front door. Users connect to the
