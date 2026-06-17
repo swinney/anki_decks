@@ -24,6 +24,10 @@ Each deck lives in its own subdirectory.
   Security Groups, AMI sharing, IAM eval, KMS envelope encryption, etc.).
   Tagged `stack::hbs` + `tier::*` + `topic::*`; 8-field note with an Acronyms
   field. Has its own `README.md`.
+- `osi_layers/` — OSI Model (7 layers), vendor-neutral: 45 cards (5 per layer —
+  function, identify, PDU, protocols, devices — plus 10 overview/mnemonic cards).
+  Tagged `OSI::L*` / `OSI::Overview` + `type::*`; color-coded 5-field note. Built
+  by `deck_versions/build_osi_deck.py`. Has its own `README.md`.
 
 ## Environment
 
