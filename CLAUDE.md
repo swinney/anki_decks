@@ -11,7 +11,7 @@ Each deck lives in its own subdirectory.
 ## Current decks
 
 - `AWS_certified_architect_associate/` — AWS Certified Solutions Architect
-  Associate (SAA-C03) study deck: 109 services with descriptions, linked
+  Associate (SAA-C03) study deck: 110 services with descriptions, linked
   homepages, associated services, and exam fields (Pick this when / Don't
   confuse with / Resilience scope). Has its own `README.md` and a companion
   `studyguide.md` for deeper topics beyond the deck.

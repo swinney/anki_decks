@@ -21,6 +21,10 @@ EXAM = {
         "Want containers without provisioning/managing EC2 capacity (serverless containers).",
         "vs EC2 launch type: no node management, but less control and can cost more at steady high scale.",
         "Regional; tasks placed across AZs."),
+    "ECS Express Mode": (
+        "Go from a container image to a live HTTPS URL with minimal config — a production-ready web app/API without hand-wiring ALB, TLS, scaling and networking, while staying ECS/Fargate-native.",
+        "vs plain ECS/Fargate: you configure all the surrounding infra yourself. vs App Runner: similar image→URL idea but a separate service; Express Mode keeps you in ECS with ALB consolidation. vs Elastic Beanstalk: EC2-based PaaS.",
+        "Regional; Fargate tasks across AZs behind the managed ALB; auto-scales on traffic/utilization."),
     "Elastic Beanstalk": (
         "Deploy a web app fast without managing infra, while still keeping access to the underlying EC2/ASG/RDS.",
         "vs CloudFormation: Beanstalk = PaaS auto-provisioning; CFN = full IaC control. vs App Runner: Beanstalk exposes resources, App Runner fully abstracts.",

@@ -18,6 +18,7 @@ BEST_PRACTICES = {
     "EC2": "https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-best-practices.html",
     "Lambda": "https://docs.aws.amazon.com/lambda/latest/dg/best-practices.html",
     "ECS": "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/ecs-best-practices.html",
+    "ECS Express Mode": "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/express-service-overview.html",
     "EKS": "https://docs.aws.amazon.com/eks/latest/best-practices/introduction.html",
     "Fargate": "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/security-fargate.html",
     "Elastic Beanstalk": "https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/security-best-practices.html",
