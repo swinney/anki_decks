@@ -43,6 +43,7 @@ up in real architecture decisions.
   - [[#Data Lake vs Data Mesh|Data Lake vs Data Mesh]]
 - [[#Application Integration|Application Integration]]
   - [[#AWS Step Functions & Stepwise Workflow Logic|AWS Step Functions & Stepwise Workflow Logic]]
+  - [[#Amazon EventBridge|Amazon EventBridge]]
 - [[#Database|Database]]
   - [[#DocumentDB vs DynamoDB|DocumentDB vs DynamoDB]]
 - [[#Management & Governance|Management & Governance]]
@@ -736,6 +737,61 @@ clear view of failures.
 - [What is Step Functions? (Developer Guide)](https://docs.aws.amazon.com/step-functions/latest/dg/welcome.html)
 - [Standard vs Express workflows](https://docs.aws.amazon.com/step-functions/latest/dg/concepts-standard-vs-express.html)
 - [Amazon States Language spec](https://states-language.net/spec.html)
+
+### Amazon EventBridge
+
+**Concept** — EventBridge is a **serverless event bus**: services, SaaS apps, and
+your own code publish **events** to a bus, and **rules** match events (by content)
+and route them to **targets** (Lambda, SQS, SNS, Step Functions, Kinesis, and
+more). It decouples producers from consumers — the producer just emits "something
+happened," and EventBridge decides who hears about it. It also includes a
+**Scheduler** (cron/rate-based events) and a **Schema Registry**, and can ingest
+events from third-party SaaS partners.
+
+**Why it matters** — EventBridge is the backbone of **event-driven
+architecture**: producers and consumers never call each other directly, so you add
+or remove consumers without touching the producer. Its **content-based filtering**
+(match on fields inside the event JSON) means each consumer subscribes only to the
+events it cares about, and the **scheduler** replaces cron servers for time-based
+triggers.
+
+**Exam angle — don't confuse with:**
+
+- **vs SNS (Simple Notification Service)** — SNS is high-throughput pub/sub
+  **fan-out** (push the same message to many subscribers, lowest latency).
+  EventBridge adds **content filtering, ~20 targets per rule, a schema registry,
+  scheduling, and SaaS event sources**, at lower throughput/slightly higher
+  latency. Cues: *"route/filter events by content," "SaaS integration,"
+  "scheduled (cron) events"* → EventBridge; *"fan out to thousands of
+  subscribers, mobile/SMS/email push, lowest latency"* → SNS.
+- **vs SQS (Simple Queue Service)** — SQS is a **queue** that *buffers* messages
+  for a consumer to pull and process at its own pace (decouple + absorb load).
+  EventBridge *routes* events to targets; it doesn't store a backlog for polling.
+  Often paired: an EventBridge rule targets an SQS queue.
+- **vs Step Functions** — EventBridge *routes* an event to start work; Step
+  Functions *orchestrates* the ordered, multi-step workflow that follows.
+- **EventBridge Scheduler vs CloudWatch Events** — EventBridge is the evolution of
+  CloudWatch Events; use EventBridge for new designs (including cron schedules).
+
+**Scenario — design:** On HBS's research data platform, when a new dataset is
+registered, several things must happen independently — kick off a validation
+Lambda, notify the owning department via SNS, and log the event for audit. → An
+**EventBridge** rule matches the "dataset.registered" event and fans it to all
+three targets; later you can add a fourth consumer (say, a catalog updater)
+without changing the producer. A **scheduled** rule can also trigger a nightly
+re-index with no cron server to maintain.
+
+**Scenario — lift & shift:** A faculty app emits events to a homegrown webhook
+dispatcher that's brittle and hard to extend. → Replace it with **EventBridge**:
+publish events to a custom bus, express routing as rules with content filters, and
+attach Lambda/SQS targets — gaining managed retries, a dead-letter queue, and
+schema discovery without maintaining dispatcher code.
+
+**Resources:**
+
+- [Amazon EventBridge — product page](https://aws.amazon.com/eventbridge/)
+- [What is Amazon EventBridge? (User Guide)](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-what-is.html)
+- [EventBridge vs SNS vs SQS — choosing](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-event-driven-architectures.html)
 
 ## Database
 
