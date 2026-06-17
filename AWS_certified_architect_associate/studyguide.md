@@ -43,6 +43,8 @@ up in real architecture decisions.
   - [[#Data Lake vs Data Mesh|Data Lake vs Data Mesh]]
 - [[#Application Integration|Application Integration]]
   - [[#AWS Step Functions & Stepwise Workflow Logic|AWS Step Functions & Stepwise Workflow Logic]]
+- [[#Database|Database]]
+  - [[#DocumentDB vs DynamoDB|DocumentDB vs DynamoDB]]
 - [[#Management & Governance|Management & Governance]]
   - [[#AWS Organizations & Service Control Policies (SCPs)|AWS Organizations & Service Control Policies (SCPs)]]
   - [[#AWS Control Tower|AWS Control Tower]]
@@ -728,6 +730,69 @@ clear view of failures.
 - [What is Step Functions? (Developer Guide)](https://docs.aws.amazon.com/step-functions/latest/dg/welcome.html)
 - [Standard vs Express workflows](https://docs.aws.amazon.com/step-functions/latest/dg/concepts-standard-vs-express.html)
 - [Amazon States Language spec](https://states-language.net/spec.html)
+
+## Database
+
+### DocumentDB vs DynamoDB
+
+**Concept** — Both are managed NoSQL databases, but they solve different problems.
+**Amazon DynamoDB** is a serverless key-value/document store built for simple,
+predictable lookups at effectively infinite scale. **Amazon DocumentDB** is a
+managed, MongoDB-compatible document database built for flexible, evolving
+document data. Choosing DocumentDB over DynamoDB for a new architecture comes down
+to your need for **query flexibility** and **how rapidly your data model will
+evolve**.
+
+**Where DocumentDB pulls ahead:**
+
+- **Ad-hoc querying** — query data flexibly without knowing your exact access
+  patterns in advance, bypassing DynamoDB's strict single-table-design discipline.
+- **Native aggregations** — complex transformations, grouping, and pseudo-joins
+  directly at the database layer via the MongoDB Aggregation Pipeline.
+- **Complex indexing** — efficiently indexes deeply nested JSON structures and
+  arrays, whereas DynamoDB has strict limits on secondary indexes for nested
+  elements.
+- **Workload isolation** — a distributed, shared-storage architecture lets you
+  spin up independent read replicas, isolating heavy analytical queries so they
+  don't impact primary write performance.
+
+**Why it matters** — DynamoDB rewards you for knowing your access patterns up
+front and punishes you when they change (you re-engineer keys and indexes).
+DocumentDB lets the questions evolve with the data, which is the realistic case
+for messy, hierarchical, still-changing datasets.
+
+**Exam angle — don't confuse with:**
+
+- **DynamoDB** = simple, predictable key-value lookups at massive/infinite scale,
+  serverless, single-digit-ms; you design around access patterns. Cues:
+  *"unpredictable/extreme scale," "serverless," "key-value," "known access
+  patterns."*
+- **DocumentDB** = MongoDB-compatible document DB for complex, evolving
+  hierarchical data needing ad-hoc queries and aggregations. Cues:
+  *"MongoDB-compatible," "aggregation pipeline," "flexible/ad-hoc queries,"
+  "nested JSON indexing."*
+- **Takeaway:** simple predictable lookups at infinite scale → **DynamoDB**;
+  complex, evolving hierarchical data demanding on-the-fly querying and
+  aggregations → **DocumentDB**.
+
+**Scenario — design:** An HBS research group is building a platform to store
+richly nested, frequently-changing study records (varying fields per protocol,
+arrays of observations) and the analysts need to run exploratory, ad-hoc queries
+and aggregations as new questions arise. → **DocumentDB**: MongoDB aggregation
+pipeline for grouping/pseudo-joins, deep indexing of nested JSON, and read
+replicas so a professor's heavy analytical query doesn't slow ingestion. DynamoDB
+would force them to lock access patterns before they even know the questions.
+
+**Scenario — lift & shift:** A faculty member's existing app already runs on
+**MongoDB** on-premises and they want a managed service with minimal code change.
+→ **DocumentDB** is MongoDB-compatible, so it's the low-friction target;
+re-platforming onto DynamoDB would mean rewriting the data model and queries.
+
+**Resources:**
+
+- [Amazon DocumentDB — product page](https://aws.amazon.com/documentdb/)
+- [Amazon DynamoDB — product page](https://aws.amazon.com/dynamodb/)
+- [DocumentDB aggregation & query support](https://docs.aws.amazon.com/documentdb/latest/developerguide/aggregation.html)
 
 ## Management & Governance
 
