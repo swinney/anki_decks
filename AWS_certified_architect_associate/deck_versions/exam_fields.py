@@ -406,8 +406,8 @@ EXAM = {
         "vs GitHub/Bitbucket: AWS-hosted with IAM authentication.",
         "Regional."),
     "X-Ray": (
-        "Distributed tracing — find latency bottlenecks and errors across microservices and serverless apps.",
-        "vs CloudWatch: traces and service maps vs metrics/logs.",
+        "Pinpoint which microservice or downstream call adds latency in a slow request; debug intermittent errors/faults across a distributed or serverless app; trace one request end-to-end (e.g., API Gateway to Lambda to DynamoDB); find cold-start and throttling hotspots; visualize service dependencies on a service map; correlate traces with CloudWatch logs/metrics via ServiceLens.",
+        "vs CloudWatch: X-Ray = per-request traces + service maps (the path and timing of one request); CloudWatch = aggregate metrics/logs/alarms (overall health) — they complement, and ServiceLens stitches them together. vs CloudTrail: request traces vs API/audit history. Emit traces with the X-Ray SDK or OpenTelemetry (ADOT).",
         "Regional."),
 
     # ---------------- ML / AI ----------------

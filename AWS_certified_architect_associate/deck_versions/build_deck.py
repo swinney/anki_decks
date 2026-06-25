@@ -236,7 +236,7 @@ SERVICES = [
     ("CodeBuild", "Developer", "Fully managed CI service that compiles source, runs tests and produces deployable artifacts.", ["CodePipeline", "CodeCommit", "ECR"]),
     ("CodeDeploy", "Developer", "Automates application deployments to EC2, Lambda, ECS and on-premises servers.", ["CodePipeline", "EC2", "Lambda", "ECS"]),
     ("CodeCommit", "Developer", "Fully managed source control service hosting secure private Git repositories.", ["CodePipeline", "CodeBuild"]),
-    ("X-Ray", "Developer", "Distributed tracing service that helps analyze and debug production and distributed applications.", ["CloudWatch", "Lambda", "API Gateway", "App Mesh"]),
+    ("X-Ray", "Developer", "End-to-end distributed tracing that follows a request as it travels across microservices, serverless functions, and APIs. Each request becomes a trace built from segments/subsegments and drawn as a service map that pinpoints latency bottlenecks, errors, faults, and throttles; sampling keeps overhead low, and annotations let you filter traces by business attributes. Instrument with the X-Ray SDK or OpenTelemetry (ADOT), with near-zero-config tracing for Lambda, API Gateway, ECS/EKS, and App Mesh; traces tie into CloudWatch (ServiceLens) for unified observability.", ["CloudWatch", "Lambda", "API Gateway", "App Mesh", "ECS", "EKS"]),
 
     ("SageMaker", "ML/AI", "Fully managed platform to build, train and deploy machine learning models at scale.", ["S3", "Bedrock", "Comprehend", "Rekognition"]),
     ("Rekognition", "ML/AI", "Adds image and video analysis—object, scene, face and text detection—to applications using deep learning.", ["S3", "SageMaker", "Comprehend"]),
