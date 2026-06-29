@@ -149,6 +149,15 @@ CARDS = [
          interview="Probes whether you understand why CMKs scale (data keys) and the key-policy-plus-IAM model.",
          acronyms="KMS = Key Management Service; CMK = Customer-Managed Key; IAM = Identity and Access Management; SSE = Server-Side Encryption; SSE-KMS = Server-Side Encryption with KMS; SSE-S3 = Server-Side Encryption with S3-managed keys; S3 = Simple Storage Service; AWS = Amazon Web Services."),
 
+    dict(key="kms-cmk", tier="tier::1", topic="topic::security", type="Security",
+         prompt="What is a KMS key (CMK), what are the three key types, and how does the key policy model work?",
+         answer="A KMS key (formerly CMK — Customer Master Key) is a logical encryption key backed by HSMs inside KMS. The raw key material never leaves KMS; you interact through API calls (Encrypt, Decrypt, GenerateDataKey). Three types: AWS managed, customer managed, and customer managed with imported material.",
+         points="AWS managed keys (aws/s3, aws/rds, etc.) are free, auto-rotated annually, and invisible — no key policy to write, but no cross-account sharing or custom rotation either. Customer managed keys ($1/month) give you full control: write a key policy, rotate on a schedule, share cross-account, set grants. Imported-material keys ($1/month) let you supply raw key bytes — you own the material and must re-import on rotation. Key policy is a resource-based policy on the key itself; BOTH the key policy AND the caller's IAM policy must allow an action for it to succeed. An overly restrictive (or empty default) key policy can lock out even the account root — always include an admin statement.",
+         services=[("KMS", KMS)],
+         contrast="AWS managed = simplest, no policy control, no cross-account; customer managed = full control + audit trail; SSE-KMS with a CMK adds CloudTrail visibility and per-key access control that SSE-S3 lacks.",
+         interview="Nearly every HBS service (S3, RDS, Secrets Manager, EBS, SSM) can use KMS. Interviewers test whether you know the key-policy-plus-IAM dual-allow requirement — the #1 'access denied' surprise.",
+         acronyms="CMK = Customer-Managed Key; KMS = Key Management Service; HSM = Hardware Security Module; IAM = Identity and Access Management; API = Application Programming Interface; ARN = Amazon Resource Name; SSE = Server-Side Encryption; SSE-KMS = Server-Side Encryption with KMS; SSE-S3 = Server-Side Encryption with S3-managed keys; AWS = Amazon Web Services."),
+
     dict(key="cognito-pools", tier="tier::3", topic="topic::identity", type="Identity contrast",
          prompt="Cognito User Pool vs Identity Pool — what does each do?",
          answer="A User Pool is the user directory: sign-up/sign-in, MFA, social/SAML federation, issuing JWT tokens. An Identity Pool exchanges a token for temporary AWS credentials so users can call AWS services directly.",
