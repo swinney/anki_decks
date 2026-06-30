@@ -57,6 +57,7 @@ up in real architecture decisions.
 - [[#Security, Identity & Compliance|Security, Identity & Compliance]]
   - [[#AWS Security Hub|AWS Security Hub]]
   - [[#AWS CloudHSM|AWS CloudHSM]]
+  - [[#AWS Detective|AWS Detective]]
 - [[#Storage|Storage]]
   - [[#Amazon EFS — Elastic File System|Amazon EFS — Elastic File System]]
 - [[#Applied Solutions|Applied Solutions]]
@@ -72,9 +73,7 @@ up in real architecture decisions.
 
 **Concept** — *Anycast* is an addressing method where the **same IP (Internet Protocol) address is
 advertised from many locations at once**, and internet routing via BGP (Border
-Gateway Protocol) delivers
-each user to the *nearest* one. Contrast with **unicast** (the normal case),
-where one IP maps to one server in one place: a user in Tokyo hitting a unicast
+Gateway Protocol) delivers each user to the *nearest* one. Contrast with **unicast** (the normal case), where one IP maps to one server in one place: a user in Tokyo hitting a unicast
 IP in Virginia sends packets all the way to Virginia. With anycast, that same IP
 is announced from Tokyo, Frankfurt, and Virginia simultaneously, and each user's
 traffic enters at whichever site is closest in network terms — same destination
@@ -1303,6 +1302,51 @@ change.
 - [AWS CloudHSM — product page](https://aws.amazon.com/cloudhsm/)
 - [What is AWS CloudHSM? (User Guide)](https://docs.aws.amazon.com/cloudhsm/latest/userguide/introduction.html)
 - [KMS custom key store backed by CloudHSM](https://docs.aws.amazon.com/kms/latest/developerguide/keystore-cloudhsm.html)
+
+### AWS Detective
+
+**Concept** — Detective is an AWS security investigation service that automatically builds and continuously updates a **behavior graph** — a property graph whose nodes are AWS entities (IAM (Identity and Access Management) principals, roles, EC2 (Elastic Compute Cloud) instances, IP addresses, S3 (Simple Storage Service) buckets, API (Application Programming Interface) calls) and whose edges are observed relationships between them (role A assumed role B, IP X called API Y at time T). Detective ingests VPC (Virtual Private Cloud) Flow Logs, CloudTrail, GuardDuty findings, and EKS (Elastic Kubernetes Service) audit logs and extracts the graph automatically — no manual instrumentation.
+
+**Why it matters** — When GuardDuty raises a finding, the natural next questions are *how did this happen?*, *what else did this entity touch?*, and *what is the blast radius?* Detective answers all three by letting you traverse the behavior graph outward from the flagged entity. It keeps a rolling ~one-year window of graph data, so you can ask temporal questions like "was this IP ever seen before the finding?". Without Detective, answering these questions means manually correlating CloudTrail JSON across dozens of API calls — hours of work vs. minutes in the Detective console.
+
+**Exam angle** — Detective is the *investigation* tool; GuardDuty is the *detection* tool. GuardDuty says "something is wrong here"; Detective says "here is the path that led here and everything this entity touched." They are complementary and Detective requires GuardDuty to be enabled. Don't confuse with Security Hub (aggregates findings from many services — a single pane of glass) or CloudTrail (the raw API audit log — Detective *uses* CloudTrail as an input but presents it as a graph, not log lines).
+
+The graph theory concepts at work:
+
+- **Reachability / path traversal** — walk edges from a compromised entity to find every resource it touched.
+- **Temporal graphs** — edges carry timestamps; query "what did this role do in the 24 hours before the finding?"
+- **Degree centrality** — an entity that suddenly connects to many previously-unrelated resources has anomalously high degree and surfaces as suspicious.
+- **Connected components** — group nodes that are mutually reachable to isolate the blast radius from the rest of the account.
+
+```mermaid
+graph LR
+    subgraph "Behavior graph (Detective)"
+        IP["Suspicious IP\n(node)"]
+        Role["IAM Role\n(node)"]
+        Inst["EC2 Instance\n(node)"]
+        Bucket["S3 Bucket\n(node)"]
+        API1["s3:GetObject call\n(edge w/ timestamp)"]
+        API2["sts:AssumeRole call\n(edge w/ timestamp)"]
+    end
+
+    GD["GuardDuty finding\n(entry point)"] -->|"flags"| IP
+    IP -->|"communicated with"| Inst
+    Inst -->|"assumed"| Role
+    Role -->|"called"| API1
+    API1 -->|"accessed"| Bucket
+    Role -->|"called"| API2
+```
+
+**Scenario — design:** A new multi-account environment needs a security investigation capability. Enable GuardDuty in every account (required prerequisite), then enable Detective in the same region — it auto-ingests GuardDuty findings, VPC Flow Logs, and CloudTrail from all member accounts via AWS Organizations. Designate one account as the Detective administrator account so investigators can query across all accounts' behavior graphs from a single console without needing access to each member account directly.
+
+**Scenario — investigation:** A GuardDuty finding flags an EC2 instance communicating with a known command-and-control IP. Open Detective, pivot to the instance node, and review: which IAM role is attached, what API calls has it made in the last 72 hours, which S3 buckets or Secrets Manager secrets did it touch, and does the same IP appear in any other account's flow logs? The graph traversal answers all of these in the Detective UI without writing a single Athena query or grepping CloudTrail logs.
+
+**Resources:**
+
+- [AWS Detective — product page](https://aws.amazon.com/detective/)
+- [What is Amazon Detective? (User Guide)](https://docs.aws.amazon.com/detective/latest/userguide/what-is-detective.html)
+- [How Detective uses graph theory (AWS blog)](https://aws.amazon.com/blogs/security/amazon-detective-graph-data-model/)
+- [GuardDuty + Detective integration](https://docs.aws.amazon.com/guardduty/latest/ug/guardduty_findings-summary.html)
 
 ## Storage
 
