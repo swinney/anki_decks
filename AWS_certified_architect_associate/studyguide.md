@@ -30,6 +30,7 @@ up in real architecture decisions.
 
 ## Table of contents
 
+- [[#Exam Strategy — Attach AWS's Label|Exam Strategy — Attach AWS's Label]]
 - [[#Networking & Content Delivery|Networking & Content Delivery]]
   - [[#Anycast IPs & AWS Global Accelerator|Anycast IPs & AWS Global Accelerator]]
   - [[#BGP — Border Gateway Protocol|BGP — Border Gateway Protocol]]
@@ -64,6 +65,128 @@ up in real architecture decisions.
   - [[#Amazon EFS — Elastic File System|Amazon EFS — Elastic File System]]
 - [[#Applied Solutions|Applied Solutions]]
   - [[#HBS case study — digitizing decades of bankruptcy filings|HBS case study — digitizing decades of bankruptcy filings]]
+
+---
+
+## Exam Strategy — Attach AWS's Label
+
+> **The meta-insight.** The SAA-C03 exam is not testing whether you can *do* AWS —
+> it is testing whether you recognize AWS's *canonical vocabulary* for things you
+> already know how to do. The whole exam is organized around named frameworks:
+> AWS takes architectural common sense, gives it an official label, then tests
+> whether you recognize the label from a scenario description. Patterns like the
+> [[#Disaster Recovery — The Four Strategy Tiers|DR tiers]] and the
+> [[#Strangler Fig Pattern|strangler fig]] aren't incidental — recognizing the
+> *named* version of something you already do is the exam's core mechanic.
+
+**The meta-strategy:** for every domain, find AWS's official "packaging" of the
+thing you already do. Your study time is best spent not *learning* these but
+*attaching AWS's label* to knowledge you already have, so that when a scenario
+describes the shape of one, the name fires instantly. The frameworks below are
+ordered roughly by how likely they are to catch an experienced engineer off
+guard.
+
+### The Well-Architected Framework — the six pillars
+
+The master framework the whole exam sits on, and the single most important
+"packaged" concept. The six pillars are **Operational Excellence**, **Security**,
+**Reliability**, **Performance Efficiency**, **Cost Optimization**, and
+**Sustainability**. Know them as a named set of six, and learn to recognize which
+pillar a question is stressing — many questions are secretly "which pillar wins
+here." When a security-posture answer and a cost answer conflict, identifying the
+pillar in tension tells you what the question is really asking.
+
+```mermaid
+mindmap
+  root((Well-Architected))
+    Operational Excellence
+    Security
+    Reliability
+    Performance Efficiency
+    Cost Optimization
+    Sustainability
+```
+
+### The 7 Rs of migration
+
+The direct analog to the strangler fig — a named enumeration you are expected to
+recall (originally 6 Rs, now 7). A scenario describes a business constraint and
+asks which R fits:
+
+- **Rehost** — "lift and shift" (AWS Application Migration Service, MGN).
+- **Replatform** — "lift, tinker, and shift" (e.g., move a self-managed DB to RDS (Relational Database Service)).
+- **Repurchase** — drop the app for a SaaS (Software-as-a-Service) equivalent.
+- **Refactor / Re-architect** — redesign cloud-native — the strangler-fig territory.
+- **Retire** — turn it off; it's no longer needed.
+- **Retain** — leave it on-premises for now (revisit later).
+- **Relocate** — move without change at the hypervisor level (e.g., VMware Cloud on AWS).
+
+### Caching strategies (ElastiCache)
+
+Two named patterns and their trade-offs:
+
+- **Lazy loading (cache-aside)** — cache only what's requested; risk of stale data and a cache-miss penalty on first read.
+- **Write-through** — write to the cache on every DB write; always fresh, but writes are heavier and you cache data that may never be read.
+
+TTL (Time To Live) is the usual tie-breaker layered on top to bound staleness.
+
+### Messaging / decoupling design patterns
+
+Task Statement 2.1 is literally "design scalable and loosely coupled
+architectures." The named vocabulary to recognize on sight:
+
+- **Fan-out** — one SNS (Simple Notification Service) topic to multiple SQS (Simple Queue Service) queues, for parallel processing.
+- **Queue-based load leveling** — an SQS queue between a spiky producer and a steady consumer, so the consumer drains at its own pace.
+- **Saga pattern** — managing a distributed transaction across microservices, usually orchestrated with Step Functions.
+- **Idempotency** and **retry with exponential backoff + jitter** — the usual "correct" answer to "why is my retry storm making things worse."
+
+### Route 53 routing policies
+
+Seven named policies; the exam tests which one solves a given scenario:
+
+| Policy | Solves |
+|---|---|
+| Simple | one record, no logic |
+| Weighted | split traffic by percentage (e.g., shift 10% to a new version) |
+| Latency-based | send users to the lowest-latency region |
+| Failover | active/passive DR cut-over via health checks |
+| Geolocation | route by user's location (e.g., EU users → EU region) |
+| Geoproximity | route by geographic distance, with a bias "shift" knob |
+| Multivalue answer | return multiple healthy IPs, DNS-level load spreading |
+
+### EC2 placement groups
+
+Three named strategies:
+
+- **Cluster** — pack instances close (same rack) for lowest network latency; HPC (High-Performance Computing) and tightly-coupled workloads.
+- **Spread** — maximum hardware isolation across distinct racks; for HA of a small number of critical instances.
+- **Partition** — group instances into isolated partitions; for large distributed workloads like HDFS (Hadoop Distributed File System), Kafka, and Cassandra.
+
+### S3 storage classes — a named spectrum
+
+Not just "Glacier" but the full tiering ladder: **Standard → Intelligent-Tiering
+→ Standard-IA → One Zone-IA → Glacier Instant Retrieval → Glacier Flexible
+Retrieval → Glacier Deep Archive** (IA = Infrequent Access). Questions usually
+hinge on the distinction between *adjacent* tiers: One Zone-IA vs. Standard-IA is
+about AZ (Availability Zone) resilience; Glacier Instant vs. Flexible is about
+retrieval latency.
+
+### Multi-account / governance packaging
+
+Organizations, SCPs (Service Control Policies), Control Tower, and "landing zone"
+as a named concept (see [[#Management & Governance|Management & Governance]]).
+Plus the security principles AWS names explicitly and expects you to recognize:
+the **Shared Responsibility Model**, **least privilege**, and **defense in
+depth**.
+
+**Resources:**
+
+- [AWS Well-Architected Framework](https://docs.aws.amazon.com/wellarchitected/latest/framework/welcome.html)
+- [The 6 Rs / 7 Rs of migration (AWS Prescriptive Guidance)](https://docs.aws.amazon.com/prescriptive-guidance/latest/migration-retiring-applications/apg-migration-strategies.html)
+- [Caching strategies — ElastiCache (lazy loading vs write-through)](https://docs.aws.amazon.com/AmazonElastiCache/latest/mem-ug/Strategies.html)
+- [Route 53 routing policies](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/routing-policy.html)
+- [EC2 placement groups](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/placement-groups.html)
+- [S3 storage classes](https://aws.amazon.com/s3/storage-classes/)
 
 ---
 
