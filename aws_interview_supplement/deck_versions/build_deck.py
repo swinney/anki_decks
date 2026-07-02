@@ -195,6 +195,15 @@ CARDS = [
          interview="The exam gives an RTO/RPO budget and asks which strategy fits — or gives a cost constraint and asks the cheapest approach that meets the target. Lead with 'RTO = downtime budget, RPO = data-loss budget', map the numbers to a tier, then name the key services: S3 snapshots for backup, RDS cross-region read replica promoted on failover for pilot light/warm standby, Route 53 health-check failover for traffic cut-over.",
          acronyms="RTO = Recovery Time Objective; RPO = Recovery Point Objective; DR = Disaster Recovery; HA = High Availability; AZ = Availability Zone; DB = Database; S3 = Simple Storage Service; RDS = Relational Database Service; CFN = CloudFormation; AWS = Amazon Web Services."),
 
+    dict(key="rto-rpo", tier="tier::1", topic="topic::governance", type="Architecture",
+         prompt="Define RTO and RPO. How do they differ, and how do they drive architecture choices?",
+         answer="RTO (Recovery Time Objective) = the maximum time the system can be down after a failure before business impact becomes unacceptable. RPO (Recovery Point Objective) = the maximum age of data that can be lost — equivalently, how far back in time you can afford to restore from.",
+         points="RTO drives how fast you must recover (downtime budget); RPO drives how often you must back up or replicate (data-loss budget). A low RTO means you need pre-provisioned capacity (Warm Standby or Multi-Site). A low RPO means you need continuous or near-continuous replication, not nightly snapshots. They are independent axes: you can have a tight RPO (replicate every minute) but a loose RTO (an hour to bring the site back up), or vice versa. Cost scales with tightening either number.",
+         services=[("S3", S3), ("RDS", RDS), ("Route 53", ROUTE53)],
+         contrast="RTO = time to recover (downtime clock). RPO = data loss window (backup clock). Confusing them on a question about 'how much data loss is acceptable' will point you to the wrong DR tier.",
+         interview="Every DR question names an RTO and RPO. Translate them to a tier immediately: hours/hours → Backup & Restore; tens-of-minutes/minutes → Pilot Light; minutes/seconds → Warm Standby; near-zero/near-zero → Multi-Site.",
+         acronyms="RTO = Recovery Time Objective; RPO = Recovery Point Objective; DR = Disaster Recovery; S3 = Simple Storage Service; RDS = Relational Database Service; AWS = Amazon Web Services."),
+
     dict(key="observability-quad", tier="tier::4", topic="topic::observability", type="Observability contrast",
          prompt="CloudWatch vs CloudTrail vs Config vs GuardDuty — who sees what?",
          answer="CloudWatch = metrics, logs, and alarms (operational telemetry). CloudTrail = the API-call audit log (who did what, when). Config = resource configuration state and compliance over time. GuardDuty = threat detection derived from logs.",
