@@ -37,6 +37,7 @@ RDS      = "https://aws.amazon.com/rds/"
 CW       = "https://aws.amazon.com/cloudwatch/"
 CT       = "https://aws.amazon.com/cloudtrail/"
 GUARDDUTY= "https://aws.amazon.com/guardduty/"
+ROUTE53  = "https://aws.amazon.com/route53/"
 
 # Each card: key, tier, topic, type, prompt, answer, points, services, contrast,
 # interview, acronyms.
@@ -184,6 +185,15 @@ CARDS = [
          contrast="Multi-AZ (a standby for failover/HA) vs read replicas (scale reads). Aurora replicas serve both roles.",
          interview="They run Aurora — know the storage architecture, the reader endpoint, and Serverless v2 vs provisioned.",
          acronyms="RDS = Relational Database Service; AZ = Availability Zone; EBS = Elastic Block Store; HA = High Availability; GB = Gigabyte; TB = Terabyte; SQL = Structured Query Language; AWS = Amazon Web Services."),
+
+    dict(key="dr-strategies", tier="tier::1", topic="topic::governance", type="Architecture",
+         prompt="What are the four AWS DR strategies, and how do RTO and RPO drive the choice?",
+         answer="RTO (Recovery Time Objective) = maximum tolerable downtime after a failure. RPO (Recovery Point Objective) = maximum tolerable data loss (i.e., how old the restored data can be). The four strategies, cheapest/slowest to most expensive/fastest: Backup & Restore → Pilot Light → Warm Standby → Multi-Site (Hot Standby).",
+         points="Backup & Restore: back up data to S3/Glacier on a schedule; rebuild infrastructure from scratch (CloudFormation/Terraform) on disaster. RTO hours, RPO hours. Lowest cost — pay only for storage. Pilot Light: keep the minimum critical components (typically the DB, replicated in near-real-time) running at low capacity in a DR region; provision and scale the rest on disaster. RTO tens of minutes, RPO minutes. Warm Standby: a fully functional but scaled-down copy of production runs in the DR region at all times; scale it to full capacity on disaster. RTO minutes, RPO seconds. Multi-Site / Hot Standby: two or more fully active regions handle live traffic via Route 53 weighted or latency-based routing; on disaster, health-check failover cuts traffic to the surviving region in seconds. RTO near-zero, RPO near-zero. Most expensive.",
+         services=[("S3", S3), ("Route 53", ROUTE53), ("RDS", RDS), ("CloudFormation", CFN)],
+         contrast="Multi-AZ ≠ DR: Multi-AZ keeps a synchronous standby in a second AZ within the same region (HA within region, automatic failover). DR is cross-region. An RDS Multi-AZ instance is not a DR strategy by itself — pair it with a cross-region read replica (promoted on failover) for true DR.",
+         interview="The exam gives an RTO/RPO budget and asks which strategy fits — or gives a cost constraint and asks the cheapest approach that meets the target. Lead with 'RTO = downtime budget, RPO = data-loss budget', map the numbers to a tier, then name the key services: S3 snapshots for backup, RDS cross-region read replica promoted on failover for pilot light/warm standby, Route 53 health-check failover for traffic cut-over.",
+         acronyms="RTO = Recovery Time Objective; RPO = Recovery Point Objective; DR = Disaster Recovery; HA = High Availability; AZ = Availability Zone; DB = Database; S3 = Simple Storage Service; RDS = Relational Database Service; CFN = CloudFormation; AWS = Amazon Web Services."),
 
     dict(key="observability-quad", tier="tier::4", topic="topic::observability", type="Observability contrast",
          prompt="CloudWatch vs CloudTrail vs Config vs GuardDuty — who sees what?",
