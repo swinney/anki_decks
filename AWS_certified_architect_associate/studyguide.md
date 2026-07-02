@@ -44,6 +44,7 @@ up in real architecture decisions.
 - [[#Application Integration|Application Integration]]
   - [[#AWS Step Functions & Stepwise Workflow Logic|AWS Step Functions & Stepwise Workflow Logic]]
   - [[#Amazon EventBridge|Amazon EventBridge]]
+  - [[#Strangler Fig Pattern|Strangler Fig Pattern]]
 - [[#Database|Database]]
   - [[#DocumentDB vs DynamoDB|DocumentDB vs DynamoDB]]
 - [[#Management & Governance|Management & Governance]]
@@ -791,6 +792,37 @@ schema discovery without maintaining dispatcher code.
 - [Amazon EventBridge — product page](https://aws.amazon.com/eventbridge/)
 - [What is Amazon EventBridge? (User Guide)](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-what-is.html)
 - [EventBridge vs SNS vs SQS — choosing](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-event-driven-architectures.html)
+
+### Strangler Fig Pattern
+
+**Concept** — Named after the strangler fig vine, which grows around a host tree and gradually replaces it. The strangler fig pattern is a migration strategy for modernizing a monolith incrementally instead of doing a risky big-bang rewrite. A **facade** (API Gateway (Application Programming Interface Gateway) or an ALB (Application Load Balancer)) sits in front of the monolith and routes all incoming traffic. You extract one piece of functionality at a time — building it as an independent service, redirecting the facade to send that traffic to the new service, and leaving the monolith to handle everything else. Repeat until the monolith is strangled down to nothing (or a thin core not worth extracting further).
+
+**Why it matters** — At every step you have a working system. If the new service has a bug, route traffic back to the monolith's equivalent logic while you fix it. You are never in a state where you have torn everything down and are hoping the rewrite works. This incremental, reversible approach is the industry-standard answer to "modernize without downtime and without a risky rewrite."
+
+**Exam angle** — The exam rarely uses the term "strangler fig" outright. Instead it describes the shape: *"a company wants to modernize a monolith incrementally with no downtime and the ability to roll back individual pieces."* Recognize that description as the strangler pattern, then name the AWS services that implement it (API Gateway or ALB for the facade, Lambda or ECS (Elastic Container Service)/Fargate for extracted services, SQS (Simple Queue Service)/SNS (Simple Notification Service) or EventBridge for async communication with the remaining monolith). Don't confuse with the Blue/Green deployment pattern (swaps the entire environment at once) or canary releases (gradual traffic shift to a new *version* of the same service, not extraction of functionality).
+
+```mermaid
+flowchart TD
+    Client["Client request"] --> Facade["Facade\n(API Gateway / ALB)"]
+
+    Facade -->|"Extracted routes\ne.g. /auth /payments"| NewSvc["New microservices\n(Lambda / ECS Fargate)"]
+    Facade -->|"All other routes\n(not yet extracted)"| Monolith["Monolith"]
+
+    NewSvc -.->|"Async events\n(SQS / EventBridge)"| Monolith
+
+    style NewSvc fill:#d4edda,stroke:#28a745
+    style Monolith fill:#fff3cd,stroke:#ffc107
+```
+
+**Scenario — lift & shift:** A company runs a legacy Java monolith on EC2 (Elastic Compute Cloud). They want to extract payment processing first (highest risk, highest value). Steps: (1) put API Gateway in front of the monolith's existing URL; (2) build a new Lambda + DynamoDB payment service; (3) update the API Gateway route `/payments` to point at the Lambda; (4) decommission that code path in the monolith. The facade handles rollback — if the Lambda has a regression, one route-mapping change restores the monolith path. Repeat for auth, order management, etc.
+
+**Scenario — design:** A new product is starting with a monolith ("monolith first" is a valid early-stage choice). Architect an API Gateway facade from day one so that when the team is ready to extract a service, the routing layer is already in place — no client-facing changes required.
+
+**Resources:**
+
+- [Strangler Fig Application — Martin Fowler](https://martinfowler.com/bliki/StranglerFigApplication.html)
+- [Modernize with the strangler fig pattern (AWS Prescriptive Guidance)](https://docs.aws.amazon.com/prescriptive-guidance/latest/cloud-design-patterns/strangler-fig.html)
+- [API Gateway as a monolith facade](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-develop-integrations.html)
 
 ## Database
 
