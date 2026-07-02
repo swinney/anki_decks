@@ -50,6 +50,7 @@ up in real architecture decisions.
 - [[#Management & Governance|Management & Governance]]
   - [[#AWS Organizations & Service Control Policies (SCPs)|AWS Organizations & Service Control Policies (SCPs)]]
   - [[#AWS Control Tower|AWS Control Tower]]
+  - [[#Disaster Recovery — The Four Strategy Tiers|Disaster Recovery — The Four Strategy Tiers]]
 - [[#Developer Tools|Developer Tools]]
   - [[#AWS X-Ray|AWS X-Ray]]
 - [[#Machine Learning & AI|Machine Learning & AI]]
@@ -1003,6 +1004,58 @@ that were previously ungoverned (subject to Control Tower's prerequisites).
 - [AWS Control Tower — product page](https://aws.amazon.com/controltower/)
 - [What is AWS Control Tower? (User Guide)](https://docs.aws.amazon.com/controltower/latest/userguide/what-is-control-tower.html)
 - [Control Tower controls (guardrails) reference](https://docs.aws.amazon.com/controltower/latest/controlreference/controls.html)
+
+### Disaster Recovery — The Four Strategy Tiers
+
+**Concept** — Every DR (Disaster Recovery) strategy is defined by two numbers: **RTO** (Recovery Time Objective — maximum tolerable downtime) and **RPO** (Recovery Point Objective — maximum tolerable data loss). The four AWS DR tiers form a spectrum from cheapest/slowest to most expensive/fastest:
+
+| Tier | RTO | RPO | Cost | What runs in the DR region |
+|---|---|---|---|---|
+| Backup & Restore | Hours | Hours | Lowest | Nothing — restore from backup |
+| Pilot Light | Tens of minutes | Minutes | Low | Core DB only, replicated live |
+| Warm Standby | Minutes | Seconds | Medium | Scaled-down full stack |
+| Multi-Site / Hot Standby | Near-zero | Near-zero | Highest | Full-scale active-active |
+
+**Why it matters** — The exam always gives you an RTO/RPO budget and asks you to pick the appropriate tier, or gives you a cost constraint and asks for the cheapest approach that meets the target. Translate the numbers to a tier first, then name the services. Tightening either RTO or RPO costs money; the architecture reflects which axis matters more to the business.
+
+**Exam angle** — The most common wrong answers are:
+
+- **Confusing Multi-AZ with DR.** Multi-AZ keeps a synchronous standby in a second AZ *within the same region* — it is an HA (High Availability) mechanism, not a DR strategy. DR is always cross-region.
+- **Pilot Light vs Warm Standby.** Pilot light = only the DB is running in the DR region; the app/web tier is off and must be provisioned on demand. Warm standby = a scaled-down but *fully functional* copy of the entire stack is running; you just scale it up. RTO for warm standby is minutes; pilot light is tens of minutes because you're launching new instances.
+- **RPO drives backup frequency, not RTO.** If the exam says "the company can tolerate losing at most 15 minutes of data", that is an RPO constraint. It tells you how often to replicate, not how fast to recover.
+
+```mermaid
+graph LR
+    subgraph "Cost / complexity →"
+        BR["Backup & Restore\nRTO: hours\nRPO: hours"]
+        PL["Pilot Light\nRTO: ~30 min\nRPO: minutes"]
+        WS["Warm Standby\nRTO: minutes\nRPO: seconds"]
+        MS["Multi-Site\nRTO: ~0\nRPO: ~0"]
+        BR --> PL --> WS --> MS
+    end
+```
+
+**Tier details:**
+
+**Backup & Restore** — Back up data to S3 or S3 Glacier on a schedule (hourly, daily). On disaster, restore from the latest backup and rebuild infrastructure from a CloudFormation or Terraform template. Nothing runs in the DR region until you need it. The RPO equals the backup interval; the RTO equals restore time + infrastructure launch time. Right choice when cost dominates and downtime is tolerable (internal tools, batch systems).
+
+**Pilot Light** — The database is replicated continuously to the DR region (RDS cross-region read replica, DynamoDB Global Tables, Aurora Global Database). The application and web tiers are shut down or represented only by AMI (Amazon Machine Image) snapshots. On disaster, promote the replica to primary, launch the app tier from pre-baked AMIs, and cut over DNS (Domain Name System) via Route 53. Right choice when the DB is the hardest thing to rebuild and the app tier can spin up in minutes.
+
+**Warm Standby** — A full but scaled-down copy of production (e.g., one small EC2 instance per service instead of an Auto Scaling fleet) runs continuously in the DR region, receiving live traffic or at least live replication. On disaster, scale the Auto Scaling groups to full capacity and update Route 53. Right choice when you can afford the cost of running a reduced environment 24/7 in exchange for a faster, more predictable failover.
+
+**Multi-Site / Hot Standby** — Two or more regions are fully active simultaneously, each running at production capacity, with Route 53 routing traffic using latency-based or weighted routing and health checks. On disaster, Route 53 health checks automatically stop sending traffic to the failed region within seconds. Right choice for customer-facing workloads with zero-downtime SLAs (Service Level Agreements). Most expensive — you are running full production twice.
+
+**Scenario — design:** A fintech startup needs RPO ≤ 5 minutes and RTO ≤ 30 minutes for its payment API. → **Pilot Light**: replicate the Aurora DB to a second region with Aurora Global Database (RPO ~1 second replication lag); keep the Lambda + API Gateway layer off; on failover, promote the secondary Aurora cluster, update the API Gateway base mapping, and verify Route 53 health-check failover. Meets the RPO easily; the 30-minute RTO is achievable with a well-tested runbook.
+
+**Scenario — lift & shift:** A company migrates an on-premises application with a contractual RTO of 4 hours and RPO of 24 hours. → **Backup & Restore**: use AWS Backup or data lifecycle policies to snapshot to S3 daily; store a CloudFormation template for the infrastructure. This meets the SLA at the lowest cost and is the right choice to avoid over-engineering a migration for a non-critical workload.
+
+**Resources:**
+
+- [Disaster Recovery of Workloads on AWS (AWS Whitepaper)](https://docs.aws.amazon.com/whitepapers/latest/disaster-recovery-workloads-on-aws/disaster-recovery-workloads-on-aws.html)
+- [AWS re:Invent — DR strategies (video)](https://www.youtube.com/watch?v=cJZw5mrxryA)
+- [RDS cross-region read replicas](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RDS_Fea_Regions_DB-eng.Feature.CrossRegionReadReplicas.html)
+- [Aurora Global Database](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-global-database.html)
+- [Route 53 health checks and failover routing](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-failover.html)
 
 ## Developer Tools
 
