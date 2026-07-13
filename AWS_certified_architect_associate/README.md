@@ -50,6 +50,41 @@ Each card has a stable ID derived from the service name, so re-importing an
 updated deck **updates** existing cards instead of duplicating them — your
 study progress is preserved.
 
+## Focused study sessions
+
+Cards on the HBS interview stack are tagged `stack::hbs` across **three** decks,
+so one search gathers all of them (Anki tags cross deck boundaries):
+
+| Deck | Tagged | Applied by |
+|---|---|---|
+| `AWS::Services` | 24 of 110 | `HBS_STACK` in `deck_versions/build_deck_v2.py` |
+| `AWS Interview Supplement — HBS Stack` | 20 of 20 | every note, by construction |
+| `AWS::OSI Layers for AWS SAs` | 24 of 43 | `HBS_KEYS` in `osi_layers_aws/deck_versions/build_deck.py` |
+
+**Build the session:** Tools → Create Filtered Deck, search
+`tag:stack::hbs -is:suspended`, limit 100. For an interview cram, **uncheck**
+"Reschedule cards based on my answers" — you then see every card regardless of
+due date, and *Empty* restores each card's original interval and due date, so
+your real schedule is untouched. Leave it **checked** to study normally.
+
+Useful searches:
+
+```
+tag:stack::hbs                                # the whole stack (68 cards)
+tag:stack::hbs tag:tier::1                    # highest-yield interview cards
+tag:stack::hbs tag:topic::networking          # subnets, EIP, security groups
+tag:stack::hbs Category:Security              # IAM, KMS, ACM, GuardDuty, Shield, CloudTrail
+tag:stack::hbs (Category:Compute or tag:topic::compute)   # compute, across decks
+```
+
+`Category` is a field on the `AWS Service Card v2` note type, so field-scoped
+drill-downs work without rebuilding anything. `tier::` and `topic::` come from
+the supplement deck.
+
+Note that filtered decks skip suspended and buried cards, and a card can only
+live in one filtered deck at a time — if a build comes back short, empty any
+other filtered deck first.
+
 ## Versioning
 
 Git history is now the source of truth for versions. The `deck_versions/`

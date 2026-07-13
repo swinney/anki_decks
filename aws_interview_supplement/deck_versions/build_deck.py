@@ -38,6 +38,7 @@ CW       = "https://aws.amazon.com/cloudwatch/"
 CT       = "https://aws.amazon.com/cloudtrail/"
 GUARDDUTY= "https://aws.amazon.com/guardduty/"
 ROUTE53  = "https://aws.amazon.com/route53/"
+SAGEMAKER= "https://aws.amazon.com/sagemaker/"
 
 # Each card: key, tier, topic, type, prompt, answer, points, services, contrast,
 # interview, acronyms.
@@ -212,6 +213,15 @@ CARDS = [
          contrast="CloudWatch = telemetry; CloudTrail = audit; Config = compliance/drift; GuardDuty = threats; Shield = DDoS.",
          interview="They list CloudWatch, CloudTrail, GuardDuty, and Shield — be crisp on which tool answers which question.",
          acronyms="API = Application Programming Interface; VPC = Virtual Private Cloud; DNS = Domain Name System; DDoS = Distributed Denial of Service."),
+
+    dict(key="sagemaker-depth", tier="tier::1", topic="topic::ml", type="ML concept",
+         prompt="SageMaker — how do you serve a model, and what do the four inference options trade off?",
+         answer="Training and inference are separate: a training job reads data from S3 and writes a model artifact back to S3; inference hosts that artifact. You then pick one of four serving modes by traffic shape, not by preference.",
+         points="Real-time endpoint: persistent instances, low latency, always-on cost — steady, latency-sensitive traffic. Serverless inference: scales to zero, pay per request, but cold starts — spiky or intermittent traffic. Asynchronous inference: queues requests, handles large payloads and long runtimes, scales to zero — heavy jobs that can wait. Batch transform: no endpoint at all, scores a whole S3 dataset offline — nothing to keep running. Cost follows directly: if the endpoint is idle most of the day, a real-time endpoint is the wrong answer.",
+         services=[("SageMaker", SAGEMAKER), ("S3", S3), ("KMS", KMS)],
+         contrast="Real-time = always on, lowest latency. Serverless = scale-to-zero, cold starts. Async = large payloads / long runtimes, queued. Batch = offline, no endpoint. Lambda can serve tiny models, but has no GPU and a hard package/timeout ceiling.",
+         interview="Two gotchas they will probe. (1) The SageMaker execution role is the role SageMaker assumes on your behalf — it needs S3 access to the data and artifact buckets, and kms:Decrypt if those buckets use SSE-KMS. A model artifact in a KMS-encrypted bucket plus a role without kms:Decrypt is the classic silent failure. (2) By default jobs run in an AWS-managed VPC; attach them to your own VPC for private networking and they suddenly have no internet route — you must add a gateway endpoint for S3 and interface endpoints for the SageMaker API/runtime, ECR, and CloudWatch Logs, or the job hangs. Also mention encryption at rest on the training volume and in transit between containers.",
+         acronyms="ML = Machine Learning; S3 = Simple Storage Service; KMS = Key Management Service; SSE-KMS = Server-Side Encryption with KMS; IAM = Identity and Access Management; VPC = Virtual Private Cloud; ECR = Elastic Container Registry; API = Application Programming Interface; GPU = Graphics Processing Unit."),
 ]
 
 

@@ -38,7 +38,7 @@ study workflow as the other decks:
 - `stack::hbs` – this whole deck is the HBS supplement.
 - `tier::1` … `tier::5` – study priority (1 = foundations … 5 = specialized).
 - `topic::<area>` – iac / networking / compute / identity / security / data /
-  observability / governance.
+  observability / governance / ml.
 
 Study the foundations first: `tag:stack::hbs (tag:tier::1 OR tag:tier::2)`.
 

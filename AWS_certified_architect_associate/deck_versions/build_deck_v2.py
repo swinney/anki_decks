@@ -89,10 +89,14 @@ if missing_bp:
     raise SystemExit(f"Missing best-practices URL: {missing_bp}")
 
 # Services in the HBS interview stack (see the hbs-interview-stack memory).
-# Tagged `stack::hbs` so the user can build an Anki filtered deck
-# (tag:stack::hbs) for focused interview study. Sub-features the user listed
-# (subnets, EIP, AMIs/AMI sharing, security groups) live inside the VPC/EC2
-# cards or the OSI deck, and Terraform has no card here — see README/notes.
+# Tagged `stack::hbs` so the filtered deck `tag:stack::hbs` gathers the whole
+# stack across all three AWS decks — this one (24 services), the interview
+# supplement (20, every note tagged), and osi_layers_aws (24 of 43, via its
+# HBS_KEYS). See "Focused study sessions" in the README.
+#
+# Sub-features with no service card of their own here — subnets, Elastic IP,
+# security groups, AMI sharing, golden AMIs, Terraform — each have a dedicated
+# card in aws_interview_supplement, so they reach the filtered deck through it.
 HBS_STACK = {
     "IAM", "S3", "ACM", "KMS", "Route 53", "CloudWatch", "VPC", "EC2", "ELB",
     "ECS", "Fargate", "ECR", "Cognito", "DynamoDB", "RDS", "Aurora",
