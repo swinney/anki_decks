@@ -38,6 +38,7 @@ up in real architecture decisions.
   - [[#AWS Transit Gateway|AWS Transit Gateway]]
   - [[#AWS App Mesh|AWS App Mesh]]
   - [[#AWS Direct Connect|AWS Direct Connect]]
+  - [[#Elastic Load Balancing — ALB vs NLB vs GWLB|Elastic Load Balancing — ALB vs NLB vs GWLB]]
 - [[#Analytics|Analytics]]
   - [[#Amazon Data Firehose|Amazon Data Firehose]]
   - [[#AWS Lake Formation|AWS Lake Formation]]
@@ -580,6 +581,151 @@ move bulk data into **S3** over the dedicated link during migration, and
 - [Direct Connect virtual interfaces (VIFs)](https://docs.aws.amazon.com/directconnect/latest/UserGuide/WorkingWithVirtualInterfaces.html)
 - [Routing policies and BGP](https://docs.aws.amazon.com/directconnect/latest/UserGuide/routing-and-bgp.html)
 - [Direct Connect Resiliency Toolkit](https://docs.aws.amazon.com/directconnect/latest/UserGuide/resiliency_toolkit.html)
+
+### Elastic Load Balancing — ALB vs NLB vs GWLB
+
+**Concept** — **Elastic Load Balancing (ELB)** is the *family name*, not a
+product. When you click "Create Load Balancer" you are choosing which **type** of
+ELB to build, and the exam almost always turns on that choice:
+
+- **Application Load Balancer (ALB)** — the **Layer 7** specialist. Routes on
+  **HTTP (Hypertext Transfer Protocol) / HTTPS / gRPC** content: URL path, host
+  header, HTTP headers, query strings. The default for web apps, microservices,
+  and containers.
+- **Network Load Balancer (NLB)** — the **Layer 4** specialist. Forwards raw
+  **TCP (Transmission Control Protocol) / UDP (User Datagram Protocol) / TLS
+  (Transport Layer Security)**. Built for extreme throughput, ultra-low latency,
+  and **static IP (Internet Protocol) addresses**.
+- **Gateway Load Balancer (GWLB)** — the **Layer 3** specialist. Operates on raw
+  IP packets to insert **third-party virtual appliances** (next-generation
+  firewalls, intrusion-prevention systems) into the traffic path. Not for ordinary
+  application compute.
+- **Classic Load Balancer (CLB)** — the 2009-era original, spanning Layers 4 and
+  7 without the modern routing features. **Legacy/deprecated**; if it appears in a
+  question it is almost always the thing to migrate *away* from.
+
+| | **ALB** | **NLB** | **GWLB** |
+| --- | --- | --- | --- |
+| **OSI layer** | 7 — HTTP/HTTPS/gRPC | 4 — TCP/UDP/TLS | 3 — IP packets |
+| **IP addressing** | **Dynamic.** No Elastic IP; you must use the DNS (Domain Name System) name. | **Static.** One **Elastic IP per Availability Zone (AZ)**. | Reached via a **VPC Endpoint**, not a public IP. |
+| **Security groups** | **Required.** | **Supported since Aug 2023** — but only if attached **at creation**. | No direct security group; controlled at the endpoint. |
+| **Client IP seen by target** | The ALB's private IP. Real client is in the **`X-Forwarded-For`** header. | The **real client IP** — but see the preservation gotcha below. | The **entire original packet**, via **GENEVE** encapsulation (port 6081). |
+| **Cross-zone balancing** | **On** by default, and **inter-AZ traffic is free**. | **Off** by default; turning it on **incurs inter-AZ data-transfer charges**. | Off by default. |
+
+```mermaid
+flowchart TD
+    A["What is the traffic?"] --> B{"Inspect HTTP content?<br/>(path, host, headers)"}
+    B -- Yes --> C["ALB — Layer 7<br/>web apps, microservices, containers"]
+    B -- No --> D{"Raw TCP/UDP,<br/>extreme performance,<br/>or a static IP?"}
+    D -- Yes --> E["NLB — Layer 4<br/>millions of req/sec, Elastic IP per AZ"]
+    D -- No --> F{"Routing to a third-party<br/>firewall / IPS appliance?"}
+    F -- Yes --> G["GWLB — Layer 3<br/>GENEVE, preserves whole packet"]
+    F -- No --> H["CLB — legacy<br/>migrate away"]
+    C -.->|"needs a static IP too"| I["Global Accelerator in front,<br/>or NLB with an ALB target group"]
+```
+
+**Why it matters** — Picking the wrong type is not a tuning problem, it is an
+architecture problem: an ALB can never hand you a fixed IP address, and an NLB
+can never route on a URL path. Most ELB exam questions are really asking *which
+member of the family solves this constraint* — and the constraints that decide it
+are almost always **layer**, **static IP**, **client IP visibility**, and **cost**.
+
+**Exam angle — the high-frequency gotchas:**
+
+- **You cannot assign an Elastic IP to an ALB.** The classic scenario is a legacy
+  partner or on-premises firewall that can only allow-list a fixed IP. Two valid
+  answers: front the ALB with **AWS Global Accelerator** (static anycast IPs — see
+  [[#Anycast IPs & AWS Global Accelerator|Anycast IPs & AWS Global Accelerator]]),
+  or put an **NLB in front of the ALB** using an **ALB target group**. Distractors
+  will offer "attach an Elastic IP to the ALB" — impossible.
+- **Cross-zone is the cost trap.** ALB: on by default, inter-AZ transfer **free**.
+  NLB: **off** by default, and enabling it **starts billing** inter-AZ traffic. A
+  question describing uneven load across AZs behind an NLB wants you to *enable*
+  cross-zone; one describing a surprise data-transfer bill wants you to notice the
+  charge.
+- **Client IP preservation is not simply "NLB sees the client".** It is **on** by
+  default for **instance** targets, but **off** by default for **IP** targets over
+  **TCP/TLS**. For an ALB the target *never* sees the client directly — the app
+  must read **`X-Forwarded-For`**.
+- **Health checks differ in depth.** ALB health-checks at Layer 7 (e.g. expects
+  `200 OK` on `/health`). An NLB defaults to a **TCP handshake** — so an app
+  returning `500 Internal Server Error` on every request is still marked
+  **healthy**, because the port is open. Fix: explicitly configure the NLB target
+  group to use an **HTTP/HTTPS health check**.
+- **Deregistration delay (connection draining) defaults to 300 seconds.** When an
+  Auto Scaling Group terminates an instance, the target goes to `draining` so
+  in-flight requests finish. If a question describes rolling deployments that
+  *hang* or take far too long, the answer is to lower
+  **`deregistration_delay.timeout_seconds`** (range 0–3600).
+- **SNI (Server Name Indication)** lets one ALB listener serve **many HTTPS sites
+  with different certificates**. Keyword *"multiple domains / multiple certs on one
+  load balancer"* → SNI. (NLB TLS listeners support SNI too, but the exam usually
+  frames it around the ALB.)
+- **NLB is the performance answer** — millions of requests per second at ultra-low
+  latency, and it can terminate TLS to offload the instances.
+
+**Troubleshooting — memorize the ALB error codes:**
+
+| Code | Meaning | Usual cause |
+| --- | --- | --- |
+| **502** Bad Gateway | The target returned a **malformed/invalid response**. | App crashed on the instance, or it is emitting a response the ALB cannot parse. |
+| **503** Service Unavailable | **No healthy targets** registered. | The target group is empty, or every target failed its health check. |
+| **504** Gateway Timeout | The target **did not respond in time**. | Slow app, database bottleneck, or the idle timeout is shorter than the request. |
+
+**How they get provisioned — EC2 vs EKS.** This is where the same two load
+balancers behave like different products:
+
+- **On Amazon EC2 (Elastic Compute Cloud)**, a load balancer is an **independent
+  piece of infrastructure**. You create it explicitly (console, CLI, CloudFormation,
+  or Terraform) and point it at an **Auto Scaling Group** via a target group.
+- **On Amazon EKS (Elastic Kubernetes Service)**, you almost never create one by
+  hand. You install the **AWS Load Balancer Controller** into the cluster, and it
+  watches Kubernetes objects and provisions the AWS load balancer for you:
+  - a Kubernetes **`Ingress`** → the controller builds an **ALB**;
+  - a Kubernetes **`Service` of `type: LoadBalancer`** → the controller builds an
+    **NLB**.
+  - In **IP target mode** the load balancer sends traffic **straight to Pod IPs**,
+    bypassing the worker nodes entirely.
+
+```mermaid
+flowchart LR
+    subgraph EC2["Amazon EC2 — provisioned as infrastructure"]
+        T1["You create the LB<br/>console / CLI / Terraform"] --> T2["Target group"] --> T3["Auto Scaling Group<br/>EC2 instances"]
+    end
+    subgraph EKS["Amazon EKS — provisioned by the cluster"]
+        K1["Ingress manifest"] --> KC["AWS Load Balancer<br/>Controller"]
+        K2["Service type: LoadBalancer"] --> KC
+        KC -->|"Ingress"| KA["ALB"]
+        KC -->|"Service"| KN["NLB"]
+        KA --> P["Pod IPs directly<br/>(IP target mode)"]
+        KN --> P
+    end
+```
+
+**Scenario — design:** A new containerized web platform on EKS needs path-based
+routing (`/api` vs `/app`), per-domain TLS certificates, and autoscaling. → Deploy
+an **`Ingress`**; the **AWS Load Balancer Controller** provisions an **ALB** with
+**SNI** for the certificates and **IP target mode** to reach Pods directly. Keep
+cross-zone on (free for ALB) and set a short **deregistration delay** so rolling
+deploys don't stall.
+
+**Scenario — lift & shift:** You migrate a legacy TCP trading application whose
+partners hard-code and allow-list a **fixed IP address**, and it currently sits
+behind a **Classic Load Balancer**. → Move to an **NLB** with an **Elastic IP per
+AZ** — it satisfies the static-IP requirement that an ALB structurally cannot,
+preserves the client IP for the app's own allow-listing, and delivers the low
+latency the workload expects. Enable **cross-zone** only after accepting the
+inter-AZ data-transfer charge.
+
+**Resources:**
+
+- [Elastic Load Balancing — product page](https://aws.amazon.com/elasticloadbalancing/)
+- [Application Load Balancer — User Guide](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/introduction.html)
+- [Network Load Balancer — User Guide](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/introduction.html)
+- [Gateway Load Balancer — User Guide](https://docs.aws.amazon.com/elasticloadbalancing/latest/gateway/introduction.html)
+- [Target groups: deregistration delay & health checks](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-target-groups.html)
+- [Troubleshoot your Application Load Balancer (502/503/504)](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-troubleshooting.html)
+- [AWS Load Balancer Controller (EKS)](https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html)
 
 ## Analytics
 
