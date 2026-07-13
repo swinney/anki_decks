@@ -108,6 +108,18 @@ unknown_hbs = HBS_STACK - service_names
 if unknown_hbs:
     raise SystemExit(f"HBS_STACK names not found in SERVICES: {sorted(unknown_hbs)}")
 
+# Front-of-card label, when it should differ from the service name. The name
+# stays the key that joins SERVICES / URL / EXAM / BEST_PRACTICES and derives the
+# GUID — only the rendered Service field changes, so nothing else moves. This is
+# the Service-field equivalent of RICH_DESCRIPTIONS: without it, a hand-edited
+# card title is silently reverted by the next rebuild.
+DISPLAY_NAMES = {
+    "X-Ray": "X-Ray — now under CloudWatch Application Signals (APM)",
+}
+unknown_display = set(DISPLAY_NAMES) - service_names
+if unknown_display:
+    raise SystemExit(f"DISPLAY_NAMES names not in SERVICES: {sorted(unknown_display)}")
+
 for name, cat, desc, assoc in SERVICES:
     pick, confuse, scope = EXAM[name]
     note = genanki.Note(
@@ -115,7 +127,7 @@ for name, cat, desc, assoc in SERVICES:
         guid=stable_guid(name),
         tags=["stack::hbs"] if name in HBS_STACK else [],
         fields=[
-            name, cat, desc, assoc_html(assoc), URL[name],
+            DISPLAY_NAMES.get(name, name), cat, desc, assoc_html(assoc), URL[name],
             esc(pick), esc(confuse), esc(scope), BEST_PRACTICES[name],
         ],
     )
